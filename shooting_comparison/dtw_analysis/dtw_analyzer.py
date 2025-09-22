@@ -89,13 +89,13 @@ class DTWAnalyzer:
         #         print(f"     Warning: {feature_name}: Missing data")
         #         feature_similarities[feature_name] = 0.0
         #         detailed_analyses[feature_name] = {'error': 'Missing feature data'}
-        # 글로벌 점수 계산 
+        # Calculate global score 
         global_result = self.similarity_calculator.compute_global_score(user_motion_data, ref_motion_data)
         
-        # 기존 구조와의 호환성을 위해 결과 매핑
+        # Map results for compatibility with existing structure
         global_similarity = global_result.get('global_score', 0.0)
         
-        # 기존 feature_similarities 구조 유지 (하위호환성)
+        # Maintain existing feature_similarities structure (backward compatibility)
         feature_similarities = {
             'global_motion_similarity': global_similarity
         }
@@ -347,6 +347,7 @@ class DTWAnalyzer:
                         'note': f'Rising DTW analysis failed'
                     }
             # Special handling for Follow-through phase with static comparison
+
             elif phase == 'Follow-through' and followthrough_analysis:
                 followthrough1 = followthrough_analysis.get('video1', {})
                 followthrough2 = followthrough_analysis.get('video2', {})
@@ -425,13 +426,13 @@ class DTWAnalyzer:
         # C. Loading timing patterns (25%)
         timing1 = loading_features1.get('loading_timing_patterns', {})
         timing2 = loading_features2.get('loading_timing_patterns', {})
-        
+    
         if timing1 is not None and timing2 is not None and len(timing1) > 0 and len(timing2) > 0:
             timing_sim = self.similarity_calculator.calculate_feature_similarity(
-                timing1, timing2, 'loading_timing_patterns'
+                timing1, timing2, 'timing_patterns'
             )
-            feature_similarities['loading_timing_patterns'] = timing_sim['overall_similarity']
-            print(f"         • Timing patterns: {timing_sim['overall_similarity']:.1f}%")
+            feature_similarities['loading_timing_patterns'] = timing_sim['similarity']
+            print(f"         • Timing patterns: {timing_sim['similarity']:.1f}%")
         
         # Calculate weighted overall similarity
         if not feature_similarities:
@@ -459,23 +460,23 @@ class DTWAnalyzer:
         return overall_similarity
     
     def _prepare_global_motion_data(self, video_data: Dict, features: Dict) -> Dict:
-        """글로벌 모션 유사도 계산을 위한 데이터 준비"""
+        """Prepare data for global motion similarity calculation"""
         try:
             frames = video_data.get('frames', [])
             
-            # wrist_y와 com_y 추출
+            # Extract wrist_y and com_y
             wrist_y = []
             com_y = []
             
             for frame in frames:
-                # wrist 좌표 추출 (shooting hand)
+                # Extract wrist coordinates (shooting hand)
                 keypoints = frame.get('keypoints', [])
-                if keypoints and len(keypoints) > 10:  # 손목은 일반적으로 인덱스 9, 10
-                    wrist_y.append(keypoints[10][1])  # 오른손 손목 Y 좌표
+                if keypoints and len(keypoints) > 10:  # Wrist is typically at index 9, 10
+                    wrist_y.append(keypoints[10][1])  # Right hand wrist Y coordinate
                 else:
                     wrist_y.append(0.0)
                 
-                # center of mass Y 계산 (간단한 approximation)
+                # Calculate center of mass Y (simple approximation)
                 if keypoints and len(keypoints) > 0:
                     valid_points = [kp[1] for kp in keypoints if len(kp) > 1]
                     if valid_points:
@@ -485,7 +486,7 @@ class DTWAnalyzer:
                 else:
                     com_y.append(0.0)
             
-            # Phase 정보 준비
+            # Prepare phase information
             phases = {}
             phase_frames = self._organize_frames_by_phase(frames)
             
@@ -493,7 +494,7 @@ class DTWAnalyzer:
                 if phase_frame_list:
                     start_idx = min([f.get('frame_index', 0) for f in phase_frame_list])
                     end_idx = max([f.get('frame_index', 0) for f in phase_frame_list])
-                    duration = (end_idx - start_idx + 1) / 30.0  # 30fps 가정
+                    duration = (end_idx - start_idx + 1) / 30.0  # Assuming 30fps
                     
                     phases[phase_name.lower()] = {
                         'start': start_idx,
@@ -504,7 +505,7 @@ class DTWAnalyzer:
             return {
                 'wrist_y': wrist_y,
                 'com_y': com_y,
-                'fps': 30,  # 기본값
+                'fps': 30,  # Default value
                 'phases': phases
             }
             
@@ -617,20 +618,16 @@ class DTWAnalyzer:
         
         # Apply differentiation enhancement
         # feature_similarity_enhanced = enhance_differentiation(feature_similarity)
-        global_similarity_enhanced = enhance_differentiation(global_motion_similarity)
-        phase_similarity_enhanced = enhance_differentiation(phase_similarity)
-        
+        print('debug: raw similarity: ', global_motion_similarity, phase_similarity)
+        # global_similarity_enhanced = enhance_differentiation(global_motion_similarity)
+        # phase_similarity_enhanced = enhance_differentiation(phase_similarity)
+        # print('debug: similarity enhanced: ', global_similarity_enhanced, phase_similarity_enhanced)
         # Combine feature and phase similarities with weights
         # Feature similarity gets more weight (70%), phase similarity gets less (30%)
         # overall_similarity = (feature_similarity_enhanced * 0.7) + (phase_similarity_enhanced * 0.3)
-        overall_similarity = (global_similarity_enhanced * 0.65) + (phase_similarity_enhanced * 0.35)
+        overall_similarity = (global_motion_similarity * 0.65) + (phase_similarity * 0.35)
         # Ensure reasonable bounds
         overall_similarity = max(10.0, min(100.0, overall_similarity))
-        
-        # print(f"   📊 Feature similarities:")
-        # for feature_name, similarity in feature_similarities.items():
-        #     weight = self.feature_weights.get(feature_name, 0.1)
-        #     print(f"      • {feature_name}: {similarity:.1f} (weight: {weight:.2f})")
         
         print(f"   📊 Feature similarities:")
         for feature_name, similarity in feature_similarities.items():
@@ -649,7 +646,7 @@ class DTWAnalyzer:
             print(f"      • {phase_name}: {similarity:.1f} (weight: {weight:.2f})")
         
         # print(f"   🎯 Feature similarity: {feature_similarity:.1f}")
-        print(f"   🎯 Global motion similarity: {global_similarity_enhanced:.1f}")
+        print(f"   🎯 Global motion similarity: {global_motion_similarity:.1f}")
         print(f"   🎯 Phase similarity: {phase_similarity:.1f}")
         print(f"   🎯 Overall similarity: {overall_similarity:.1f}")
         

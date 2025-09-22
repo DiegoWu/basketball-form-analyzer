@@ -19,7 +19,7 @@ from datetime import datetime
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from data_collection.dtw_processor import DTWProcessor
+# from data_collection.dtw_processor import DTWProcessor
 from shooting_comparison.shooting_comparison_visualizer import ShootingComparisonVisualizer
 from shooting_comparison.analysis_utils import get_analysis_utils
 from shooting_comparison.setup_analyzer import SetupAnalyzer
@@ -55,7 +55,7 @@ class ShootingComparisonPipeline:
         self.analysis_interpreter = AnalysisInterpreter()
 
         # Initialize DTW processor
-        self.dtw_processor = DTWProcessor()
+        # self.dtw_processor = DTWProcessor()
         self.analysis_utils = get_analysis_utils()
 
         # Video and data storage
