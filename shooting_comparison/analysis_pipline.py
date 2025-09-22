@@ -8,7 +8,7 @@ from typing import List, Dict, Optional, Tuple
 import numpy as np
 from datetime import datetime
 
-from data_collection.dtw_processor import DTWProcessor
+# from data_collection.dtw_processor import DTWProcessor
 from shooting_comparison.shooting_comparison_visualizer import ShootingComparisonVisualizer
 from shooting_comparison.analysis_utils import get_analysis_utils
 from shooting_comparison.setup_analyzer import SetupAnalyzer
