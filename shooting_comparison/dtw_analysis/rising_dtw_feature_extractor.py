@@ -452,7 +452,7 @@ class RisingDTWFeatureExtractor(SafeCoordinateMixin):
             'wrist': normalized_wrist,
             'elbow': normalized_elbow
         }
-    
+
     def _calculate_trajectory_velocity(self, trajectory: List[Dict]) -> List[Dict]:
         """Calculate velocity for trajectory points"""
         if len(trajectory) < 2:
@@ -485,7 +485,7 @@ class RisingDTWFeatureExtractor(SafeCoordinateMixin):
         """Calculate curvature at each point in trajectory"""
         if len(trajectory) < 3:
             return [0.0] * len(trajectory)
-        
+
         curvatures = []
         for i in range(len(trajectory)):
             if i == 0 or i == len(trajectory) - 1:

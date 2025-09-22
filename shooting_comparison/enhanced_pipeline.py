@@ -36,7 +36,9 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
     def __init__(self):
         super().__init__()  # Initialize existing pipeline completely
         self.dtw_extension = DTWInterpreterExtension()
-        
+        self.video1_path = None
+        self.video2_path = None
+
         # Keep existing interpreter - just extend it
         self.existing_interpreter = AnalysisInterpreter()
         
@@ -61,6 +63,9 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
         Returns:
             Comparison results with optional DTW enhancement
         """
+        self.video1_path = video1_path
+        self.video2_path = video2_path
+
         print(f"\n🏀 Starting Enhanced Shooting Comparison")
         print("=" * 60)
         print(f"📹 Video 1: {os.path.basename(video1_path)}")
@@ -736,12 +741,9 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
                     video_idx = int(video_choice) - 1
                     if 0 <= video_idx < len(folder_videos):
                         selected_video = folder_videos[video_idx]
-                        if selected_video not in selected_videos:
-                            selected_videos.append(selected_video)
-                            print(f"✅ Selected: {os.path.basename(selected_video)}")
-                            break
-                        else:
-                            print("❌ This video is already selected. Please choose a different video.")
+                        selected_videos.append(selected_video)
+                        print(f"✅ Selected: {os.path.basename(selected_video)}")
+                        break
                     else:
                         print(f"❌ Please enter a number between 1 and {len(folder_videos)}")
                 except ValueError:
@@ -896,6 +898,7 @@ def run_enhanced_comparison(video1_path: str, video2_path: str,
         Enhanced comparison results
     """
     pipeline = EnhancedShootingComparisonPipeline()
+
     return pipeline.run_comparison(video1_path, video2_path, save_results, include_dtw)
 
 

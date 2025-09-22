@@ -64,8 +64,9 @@ class DTWInterpreterExtension:
         setup_analysis = comparison_results.get('setup_analysis', {})
         release_analysis = comparison_results.get('release_analysis', {})
         loading_analysis = comparison_results.get('loading_analysis', {})
-        followthrough_analysis = comparison_results.get('followthrough_analysis', {})
+        followthrough_analysis = comparison_results.get('follow_through_analysis', {})
         rising_analysis = comparison_results.get('rising_analysis', {})
+
         dtw_results = self.dtw_analyzer.analyze_shooting_similarity(
             video1_data, video2_data, selected_hand, setup_analysis, release_analysis, loading_analysis, followthrough_analysis, rising_analysis
         )
