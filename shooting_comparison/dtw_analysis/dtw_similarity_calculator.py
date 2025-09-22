@@ -59,10 +59,18 @@ class DTWSimilarityCalculator:
             feature1: First shooting motion feature data
             feature2: Second shooting motion feature data
             feature_name: Name of the feature being compared
-            
+
         Returns:
             Dictionary containing similarity metrics and DTW analysis
         """
+        if not feature1 and not feature2:
+            return {
+                'overall_similarity': 100.0,
+                'subfeature_similarities': {},
+                'dtw_analysis': {},
+                'feature_type': 'unknown'
+            }
+
         if not feature1 or not feature2:
             return {
                 'overall_similarity': 0.0,
@@ -70,19 +78,27 @@ class DTWSimilarityCalculator:
                 'dtw_analysis': {'error': 'Missing feature data'},
                 'feature_type': 'unknown'
             }
-        
+
         feature_type = feature1.get('feature_type', 'trajectory_2d')
         constraints = self.dtw_constraints.get(feature_type, self.dtw_constraints['trajectory_2d'])
         
-                # Debugging: feature_type
+        # Debugging: feature_type
         if feature_name == 'ball_wrist_trajectory':
             print(f"         Debug: ball_wrist_trajectory feature_type = {feature_type}")
             print(f"         Debug: Using constraints = {constraints}")
         
-# Handle new Rising DTW features
+        # Handle new Rising DTW features
         if feature_name in ['rising_windup_kinematics', 'rising_jump_dynamics', 'rising_timing_patterns']:
             return self._calculate_rising_dtw_similarity(feature1, feature2, feature_name, constraints)
-        
+
+        if feature_name == 'timing_patterns':
+            print("         Debug: timing_patterns feature comparison")
+            print(f"         Debug: feature1 keys = {list(feature1.keys())}")
+            print(f"         Debug: feature2 keys = {list(feature2.keys())}")
+            sim_result = self._calculate_timing_pattern_similarity(feature1, feature2, constraints)
+            print(f"         Debug: timing_patterns similarity = {sim_result}")
+            return sim_result
+
         similarities = {}
         dtw_results = {}
         
@@ -106,6 +122,11 @@ class DTWSimilarityCalculator:
                 except (TypeError, ValueError):
                     return True
             
+            if is_empty_series(series1) and is_empty_series(series2):
+                similarities[key] = 100.0
+                dtw_results[key] = {'error': 'Both series empty'}
+                continue
+
             if is_empty_series(series1) or is_empty_series(series2):
                 similarities[key] = 0.0
                 dtw_results[key] = {'error': 'Empty series'}
@@ -371,7 +392,7 @@ class DTWSimilarityCalculator:
             print(f"   🔍 DTW Debug - Params: max_dist={max_expected_dist}, scaling={scaling_factor}")
         
         return final_similarity
-    
+
     def _fallback_dtw_distance(self, series1: List[float], series2: List[float]) -> float:
         """
         Fallback DTW implementation when dtaidistance is not available.
@@ -504,10 +525,17 @@ class DTWSimilarityCalculator:
             Similarity result dictionary
         """
         try:
+
+            # --- Fix: extract timing_pattern if input is a dict ---
+            if isinstance(pattern1, dict) and 'timing_pattern' in pattern1:
+                pattern1 = pattern1['timing_pattern']
+            if isinstance(pattern2, dict) and 'timing_pattern' in pattern2:
+                pattern2 = pattern2['timing_pattern']
+            # ------------------------------------------------------
+
             if not pattern1 or not pattern2 or len(pattern1) < 2 or len(pattern2) < 2:
                 return {'similarity': 0.0, 'dtw_info': {'error': 'insufficient_timing_data'}}
-            
-            # Convert to numpy arrays for easier processing
+
             arr1 = np.array(pattern1)
             arr2 = np.array(pattern2)
             
@@ -614,6 +642,7 @@ class DTWSimilarityCalculator:
                 continue
             
             # Special handling for Follow-through phase using static comparison
+
             if phase == 'Follow-through' and followthrough1 and followthrough2:
                 print(f"      🔍 Using static comparison for Follow-through phase...")
                 followthrough_result = self.calculate_followthrough_static_similarity(
@@ -1297,7 +1326,7 @@ class DTWSimilarityCalculator:
         dip_sim = self._compare_dip_point_angles(
             rising_analysis1.get('dip_point_analysis', {}),
             rising_analysis2.get('dip_point_analysis', {})
-        )
+        ) 
         static_components['dip_point_angles']['similarity'] = dip_sim
         print(f"         🔸 Dip point angles similarity: {dip_sim:.1f}%")
         
@@ -1380,8 +1409,8 @@ class DTWSimilarityCalculator:
             if not tilt1 or not tilt2:
                 return 0.0
             
-            max_tilt1 = tilt1.get('max_shoulder_tilt', 0)
-            max_tilt2 = tilt2.get('max_shoulder_tilt', 0)
+            max_tilt1 = tilt1.get('max_tilt', 0)
+            max_tilt2 = tilt2.get('max_tilt', 0)
             
             if max_tilt1 == 0 or max_tilt2 == 0:
                 return 0.0
@@ -1413,10 +1442,11 @@ class DTWSimilarityCalculator:
         try:
             if not windup1 or not windup2:
                 return 0.0
-            
+            # print('debug windup1:', windup1)
+            # print('debug windup2:', windup2)
             curvature1 = windup1.get('trajectory_curvature', 0)
             curvature2 = windup2.get('trajectory_curvature', 0)
-            
+            print(f"           Curvatures: {curvature1} vs {curvature2}")
             if curvature1 == 0 or curvature2 == 0:
                 return 0.0
             
@@ -1474,13 +1504,14 @@ class DTWSimilarityCalculator:
     def _compare_dip_point_angles(self, dip1: Dict, dip2: Dict) -> float:
         """Compare dip point angles using config thresholds."""
         try:
+
             if not dip1 or not dip2:
                 return 0.0
             
             # Compare available angles at dip point
             similarities = []
             
-            for angle_name in ['shoulder_angle', 'elbow_angle', 'wrist_angle']:
+            for angle_name in ['dip_shoulder_elbow_wrist', 'dip_elbow_shoulder_hip', 'dip_torso_angle', 'dip_arm_torso_angle']: 
                 angle1 = dip1.get(angle_name, 0)
                 angle2 = dip2.get(angle_name, 0)
                 
@@ -1501,13 +1532,15 @@ class DTWSimilarityCalculator:
         try:
             if not setup1 or not setup2:
                 return 0.0
-            
+
             # Compare available angles at setup point
             similarities = []
             
-            for angle_name in ['shoulder_angle', 'elbow_angle', 'wrist_angle']:
-                angle1 = setup1.get(angle_name, 0)
-                angle2 = setup2.get(angle_name, 0)
+            for angle_name in ['shoulder_elbow_wrist', 'elbow_shouler_hip', 'torso_angle', 'arm_torso_angle']:
+                arm_angles1 = setup1.get('arm_angles', {})
+                arm_angles2 = setup2.get('arm_angles', {})
+                angle1 = arm_angles1.get(angle_name, 0)
+                angle2 = arm_angles2.get(angle_name, 0)
                 
                 if angle1 != 0 and angle2 != 0:
                     angle_diff = abs(float(angle1) - float(angle2))
@@ -1617,8 +1650,8 @@ class DTWSimilarityCalculator:
         """
         if config is None:
             config = {
-                'w_dtw_wrist': 0.25,
-                'w_dtw_com': 0.20, 
+                'w_dtw_wrist': 0.30,
+                'w_dtw_com': 0.30, 
                 'w_Tvec': 0.20,
                 'w_timing': 0.20,
                 'lambda_boundary': 0.15
@@ -1657,7 +1690,7 @@ class DTWSimilarityCalculator:
             
             # Normalize score (0-100)
             global_score = max(10.0, min(100.0, global_score))
-            
+            print('debug global score:', global_score)
             result = {
                 'global_score': float(global_score),
                 'component_scores': {
@@ -1725,7 +1758,8 @@ class DTWSimilarityCalculator:
         try:
             user_phases = user_data.get('phases', {})
             ref_phases = ref_data.get('phases', {})
-            
+            print('debug user phases:', user_phases)
+            print('debug ref phases:', ref_phases)
             if not user_phases or not ref_phases:
                 return 50.0  # Default value
             
@@ -1740,7 +1774,7 @@ class DTWSimilarityCalculator:
             user_ratios = []
             ref_ratios = []
             
-            phase_names = ['prep', 'load', 'rise', 'release', 'ft']
+            phase_names = ['setup', 'loading', 'rising', 'release', 'follow-through']
             for phase_name in phase_names:
                 user_duration = user_phases.get(phase_name, {}).get('duration', 0)
                 ref_duration = ref_phases.get(phase_name, {}).get('duration', 0)
@@ -1789,10 +1823,10 @@ class DTWSimilarityCalculator:
             ref_phases = ref_data.get('phases', {})
             
             if user_phases and ref_phases:
-                user_rise_dur = user_phases.get('rise', {}).get('duration', 1)
-                user_prep_dur = user_phases.get('prep', {}).get('duration', 1)
-                ref_rise_dur = ref_phases.get('rise', {}).get('duration', 1)
-                ref_prep_dur = ref_phases.get('prep', {}).get('duration', 1)
+                user_rise_dur = user_phases.get('rising', {}).get('duration', 1)
+                user_prep_dur = user_phases.get('setup', {}).get('duration', 1)
+                ref_rise_dur = ref_phases.get('rising', {}).get('duration', 1)
+                ref_prep_dur = ref_phases.get('setup', {}).get('duration', 1)
                 
                 if user_prep_dur > 0 and ref_prep_dur > 0:
                     user_ratio = user_rise_dur / user_prep_dur
@@ -1841,12 +1875,13 @@ class DTWSimilarityCalculator:
             # Check for abrupt changes at phase boundaries
             user_phases = user_data.get('phases', {})
             ref_phases = ref_data.get('phases', {})
-            
+            print('debug user_phases:', user_phases)
+            print('debug ref_phases:', ref_phases)
             if not user_phases or not ref_phases:
                 return 0.0
             
             # Simple phase boundary smoothness check
-            phase_transitions = [('prep', 'load'), ('load', 'rise'), ('rise', 'release'), ('release', 'ft')]
+            phase_transitions = [('setup', 'loading'), ('loading', 'rising'), ('rising', 'release'), ('release', 'follow-through')]
             
             for phase1, phase2 in phase_transitions:
                 if phase1 in user_phases and phase2 in user_phases:
@@ -1856,7 +1891,7 @@ class DTWSimilarityCalculator:
                     )
                     if transition_smoothness < 0.5:  # If there is an abrupt change
                         penalty += 10.0
-            
+            print(penalty)
             return min(50.0, penalty)  # Maximum penalty of 50 points
             
         except Exception as e:
