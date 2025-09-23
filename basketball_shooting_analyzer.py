@@ -115,7 +115,7 @@ class BasketballShootingAnalyzer:
             print("❌ No video files found in data/video/Standard or data/video/EdgeCase folders.")
             return None
         
-        # 실제 디렉토리에 있는 파일들만 정확히 카운트
+        # Only count files that actually exist in the directory accurately
         standard_videos = []
         edgecase_videos = []
         bakke_videos = []
@@ -688,7 +688,7 @@ class BasketballShootingAnalyzer:
                 frames_used.append(i)
                 print(f"   Frame {i}: Final torso {frame_torso:.4f} (average of {len(valid_torso_lengths)} measurements)")
         
-        if len(torso_values) >= 1:  # 최소 1프레임으로 변경 (3 → 1)
+        if len(torso_values) >= 1:  # Changed to minimum 1 frame (3 → 1)
             stable_torso = np.mean(torso_values)
             print(f"   ✅ Stable torso: {stable_torso:.4f} (from frames {frames_used})")
             return stable_torso
@@ -704,7 +704,7 @@ class BasketballShootingAnalyzer:
         
         # Get the frame index where first meaningful transition occurred
         first_transition_frame = getattr(self.phase_detector, 'first_transition_frame', None)
-        print(f"   🔍 DEBUG: phase_detector.first_transition_frame = {first_transition_frame}")  # 중요한 디버깅 로그 유지
+        print(f"   🔍 DEBUG: phase_detector.first_transition_frame = {first_transition_frame}") 
         
         if first_transition_frame is None:
             print("   ⚠️ No phase transition detected, using first 4 frames")
@@ -760,12 +760,12 @@ class BasketballShootingAnalyzer:
             # Check arm positions relative to center
             arm_direction = None
             if isinstance(left_wrist, dict) and 'x' in left_wrist:
-                if left_wrist['x'] > center_x:  # 왼팔이 중심보다 오른쪽에 있음 → 오른쪽을 보고 있음
+                if left_wrist['x'] > center_x:  # Left arm is to the right of the center → facing right
                     arm_direction = 'right'
                 else:
                     arm_direction = 'left'
             elif isinstance(right_wrist, dict) and 'x' in right_wrist:
-                if right_wrist['x'] < center_x:  # 오른팔이 중심보다 왼쪽에 있음 → 왼쪽을 보고 있음
+                if right_wrist['x'] < center_x:  # Right arm is to the left of the center → facing left
                     arm_direction = 'left'
                 else:
                     arm_direction = 'right'
@@ -818,12 +818,12 @@ class BasketballShootingAnalyzer:
                 # Check arm positions relative to center
                 arm_direction = None
                 if isinstance(left_wrist, dict) and 'x' in left_wrist:
-                    if left_wrist['x'] > center_x:  # 왼팔이 중심보다 오른쪽에 있음 → 오른쪽을 보고 있음
+                    if left_wrist['x'] > center_x:  # The left arm is to the right of the center → facing right
                         arm_direction = 'right'
                     else:
                         arm_direction = 'left'
                 elif isinstance(right_wrist, dict) and 'x' in right_wrist:
-                    if right_wrist['x'] < center_x:  # 오른팔이 중심보다 왼쪽에 있음 → 왼쪽을 보고 있음
+                    if right_wrist['x'] < center_x:  # The right arm is to the left of the center → facing left
                         arm_direction = 'left'
                     else:
                         arm_direction = 'right'
@@ -890,12 +890,12 @@ class BasketballShootingAnalyzer:
             # Check arm positions relative to center
             arm_direction = None
             if isinstance(left_wrist, dict) and 'x' in left_wrist:
-                if left_wrist['x'] > center_x:  # 왼팔이 중심보다 오른쪽에 있음 → 오른쪽을 보고 있음
+                if left_wrist['x'] > center_x:  # Left arm is to the right of the center → facing right
                     arm_direction = 'right'
                 else:
                     arm_direction = 'left'
             elif isinstance(right_wrist, dict) and 'x' in right_wrist:
-                if right_wrist['x'] < center_x:  # 오른팔이 중심보다 왼쪽에 있음 → 왼쪽을 보고 있음
+                if right_wrist['x'] < center_x:  # Right arm is to the left of the center → facing left
                     arm_direction = 'left'
                 else:
                     arm_direction = 'right'
@@ -1179,7 +1179,7 @@ class BasketballShootingAnalyzer:
         # Find first meaningful transition within this shot (Set-up → Loading/Rising)
         first_transition_frame = None
         
-        for i in range(shot_start + 1, shot_end + 1):  # shot_start + 1부터 검사 (첫 프레임 제외)
+        for i in range(shot_start + 1, shot_end + 1):  # shot_start + 1 to avoid index error
             if i < len(self.phases):
                 current_phase = self.phases[i]
                 prev_phase = self.phases[i-1]
@@ -1247,7 +1247,7 @@ class BasketballShootingAnalyzer:
                         hip_y_values.append(reference_hip['y'])
                         frames_used.append(frame_idx)
         
-        if len(hip_x_values) >= 1:  # 최소 1프레임으로 변경 (3 → 1)
+        if len(hip_x_values) >= 1:  # Changed to minimum 1 frame (3 → 1)
             stable_hip_x = np.mean(hip_x_values)
             stable_hip_y = np.mean(hip_y_values)
             return stable_hip_x, stable_hip_y
@@ -1369,7 +1369,7 @@ class BasketballShootingAnalyzer:
             else:
                 continue
         
-        if len(hip_x_values) >= 1:  # 최소 1프레임으로 변경 (3 → 1)
+        if len(hip_x_values) >= 1:  # Minimum 1 frame
             stable_hip_x = np.mean(hip_x_values)
             stable_hip_y = np.mean(hip_y_values)
             print(f"   ✅ First frames hip: ({stable_hip_x:.4f}, {stable_hip_y:.4f})")
@@ -1598,7 +1598,7 @@ class BasketballShootingAnalyzer:
                             current_phase = next_phase
                             phase_start_frame = i
                             current_phase_start = i
-                # print(f"Frame {i}: {current_phase} phase started")  # 로그 제거
+                # print(f"Frame {i}: {current_phase} phase started")
             
             self.phases.append(current_phase)
         
@@ -1775,7 +1775,7 @@ class BasketballShootingAnalyzer:
             # If transition is abnormal, mark it
             if not is_normal:
                 abnormal_points.append(i)
-                # print(f"    Abnormal transition at frame {i}: {current_phase} → {next_phase}")  # 로그 제거
+                # print(f"    Abnormal transition at frame {i}: {current_phase} → {next_phase}")
         
         if not abnormal_points:
             print("  No abnormal transitions found.")
@@ -1794,7 +1794,7 @@ class BasketballShootingAnalyzer:
             for i in range(start_point + 1, abnormal_point):
                 if self.phases[i] in ["Loading", "Loading-Rising", "Rising", "Release", "Follow-through"]:  # Added Loading-Rising
                     self.phases[i] = "Set-up"
-                    # print(f"    Frame {i}: {self.phases[i]} → Set-up (abnormal transition)")  # 로그 제거
+                    # print(f"    Frame {i}: {self.phases[i]} → Set-up (abnormal transition)")
         
         print("  Cancellation processing completed.")
     
@@ -2530,7 +2530,7 @@ class BasketballShootingAnalyzer:
         
         phase = shooting_phases[frame_idx]
         
-        # Debug: Print phase information (only when phase changes) - 로그 제거
+        # Debug: Print phase information (only when phase changes) - disabled for cleaner output
         # if not hasattr(self, '_last_logged_phase') or self._last_logged_phase != phase:
         #     print(f"Frame {frame_idx} ({data_type}): Phase = {phase}")
         #     self._last_logged_phase = phase
@@ -3419,7 +3419,7 @@ class BasketballShootingAnalyzer:
             
             valid_torso_lengths = []
             
-            # Check left side torso (신뢰도 기반)
+            # Check left side torso ( shoulder to hip )
             if (isinstance(left_shoulder, dict) and isinstance(left_hip, dict) and
                 'x' in left_shoulder and 'y' in left_shoulder and
                 'x' in left_hip and 'y' in left_hip):
@@ -3434,7 +3434,7 @@ class BasketballShootingAnalyzer:
                     if left_torso_length > 0:
                         valid_torso_lengths.append(left_torso_length)
             
-            # Check right side torso (신뢰도 기반)
+            # Check right side torso ( shoulder to hip )
             if (isinstance(right_shoulder, dict) and isinstance(right_hip, dict) and
                 'x' in right_shoulder and 'y' in right_shoulder and
                 'x' in right_hip and 'y' in right_hip):
@@ -3455,7 +3455,7 @@ class BasketballShootingAnalyzer:
                 torso_values.append(frame_torso)
                 valid_frames += 1
         
-        if len(torso_values) >= 10:  # 최소 10프레임 이상 필요
+        if len(torso_values) >= 10:  # At least 10 valid frames required
             overall_torso = np.mean(torso_values)
             print(f"   ✅ Overall torso: {overall_torso:.4f} (from {valid_frames}/{len(self.pose_data)} frames)")
             return overall_torso
@@ -3516,12 +3516,12 @@ class BasketballShootingAnalyzer:
             # Check arm positions relative to center
             arm_direction = None
             if isinstance(left_wrist, dict) and 'x' in left_wrist:
-                if left_wrist['x'] > center_x:  # 왼팔이 중심보다 오른쪽에 있음 → 오른쪽을 보고 있음
+                if left_wrist['x'] > center_x:  # Left arm is to the right of the center → facing right
                     arm_direction = 'right'
                 else:
                     arm_direction = 'left'
             elif isinstance(right_wrist, dict) and 'x' in right_wrist:
-                if right_wrist['x'] < center_x:  # 오른팔이 중심보다 왼쪽에 있음 → 왼쪽을 보고 있음
+                if right_wrist['x'] < center_x:  # Right arm is to the left of the center → facing left
                     arm_direction = 'left'
                 else:
                     arm_direction = 'right'
@@ -3531,7 +3531,7 @@ class BasketballShootingAnalyzer:
                 valid_frames += 1
         
         # Determine final direction
-        if len(direction_votes) >= 10:  # 최소 10프레임 이상 필요
+        if len(direction_votes) >= 10:  # At least 10 frames required
             from collections import Counter
             direction_count = Counter(direction_votes)
             facing_direction = direction_count.most_common(1)[0][0]
@@ -3590,12 +3590,12 @@ class BasketballShootingAnalyzer:
             # Check arm positions relative to center
             arm_direction = None
             if isinstance(left_wrist, dict) and 'x' in left_wrist:
-                if left_wrist['x'] > center_x:  # 왼팔이 중심보다 오른쪽에 있음 → 오른쪽을 보고 있음
+                if left_wrist['x'] > center_x:  # Left arm is to the right of the center → facing right
                     arm_direction = 'right'
                 else:
                     arm_direction = 'left'
             elif isinstance(right_wrist, dict) and 'x' in right_wrist:
-                if right_wrist['x'] < center_x:  # 오른팔이 중심보다 왼쪽에 있음 → 왼쪽을 보고 있음
+                if right_wrist['x'] < center_x: # Right arm is to the left of the center → facing left
                     arm_direction = 'left'
                 else:
                     arm_direction = 'right'
