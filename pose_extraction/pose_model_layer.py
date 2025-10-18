@@ -72,11 +72,14 @@ class PoseModelLayer:
         }
     def _load_model(self):
         """Load MoveNet model"""
-        model_url = "https://www.kaggle.com/models/google/movenet/TensorFlow2/singlepose-thunder/4"
+        # model_url = "https://www.kaggle.com/models/google/movenet/TensorFlow2/singlepose-thunder/4"
         # model_url = "https://tfhub.dev/google/movenet/singlepose/lightning/4"
-        self.movenet = hub.load(model_url)
+        # self.movenet = hub.load(model_url)
+        # self.model = self.movenet.signatures["serving_default"]
+        # print("MoveNet model loading completed")
+        model_path = "pose_extraction/models/movenet_singlepose_thunder"        
+        self.movenet = tf.saved_model.load(model_path)
         self.model = self.movenet.signatures["serving_default"]
-        print("MoveNet model loading completed")
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess frame"""
