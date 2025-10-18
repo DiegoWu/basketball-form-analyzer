@@ -625,10 +625,10 @@ class DTWAnalyzer:
         # Combine feature and phase similarities with weights
         # Feature similarity gets more weight (70%), phase similarity gets less (30%)
         # overall_similarity = (feature_similarity_enhanced * 0.7) + (phase_similarity_enhanced * 0.3)
-        overall_similarity = (global_motion_similarity * 0.65) + (phase_similarity * 0.35)
+        overall_similarity = (global_motion_similarity * 0.30) + (phase_similarity * 0.70)
         # Ensure reasonable bounds
         overall_similarity = max(10.0, min(100.0, overall_similarity))
-        
+
         print(f"   📊 Feature similarities:")
         for feature_name, similarity in feature_similarities.items():
             weight = self.feature_weights.get(feature_name, 0.1)
