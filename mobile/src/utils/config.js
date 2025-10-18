@@ -3,12 +3,14 @@
 export const CONFIG = {
   // Backend Configuration
   BACKEND: {
-    BASE_URL: 'http://192.168.1.97:8000', // Update with your backend URL
+    BASE_URL: 'http://10.141.20.254:8000', // Update with your backend URL
+    // BASE_URL: "http://10.141.69.87:8000",
     ENDPOINTS: {
       ANALYZE_VIDEO: '/analysis/analyze-video',
       COMPARE_WITH_PLAYER: '/analysis/compare-with-player',
       GET_PLAYER_PROFILES: '/synthetic/player-profiles',
-      GENERATE_SYNTHETIC: '/synthetic/generate-profile'
+      GENERATE_SYNTHETIC: '/synthetic/generate-profile',
+      AUTO_MATCH_WITH_PLAYER: '/analysis/auto'
     },
     TIMEOUT: 60000, // 6 seconds
   },

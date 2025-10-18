@@ -19,7 +19,12 @@ import uvicorn
 
 from fastapi.staticfiles import StaticFiles
 
-from backend.services.analysis_service import analyze_video_service, compare_with_player_service
+from backend.services.analysis_service import analyze_video_service, compare_with_player_service, auto_compare_service
+from backend.services.twilio_service import send_sms
+
+from fastapi import FastAPI, HTTPException, Request
+from backend.services.twilio_service import send_sms
+
 
 app = FastAPI(
     title="Basketball Form Analyzer - Synthetic Profiles Integration",
@@ -54,6 +59,23 @@ async def compare_with_player(
     player_style: str = Form(...)
 ):
     return JSONResponse(content=compare_with_player_service(video, player_id, player_style))
+
+@app.post("/analysis/auto")
+async def auto_compare(video: UploadFile = File(...)):
+    return JSONResponse(content=auto_compare_service(video))
+
+@app.post("/send-sms")
+async def send_sms_endpoint(request: Request):
+    data = await request.json()
+    body = data.get("body")
+    to = data.get("to")
+    if not body or not to:
+        raise HTTPException(status_code=400, detail="Missing body or to")
+    try:
+        sid = send_sms(body, to)
+        return {"status": "sent", "sid": sid, "body": body, "to": to}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

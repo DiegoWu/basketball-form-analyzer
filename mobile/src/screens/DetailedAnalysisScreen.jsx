@@ -16,24 +16,24 @@ const DetailedAnalysisScreen = ({ detailedResult, selectedPlayer }) => {
   console.log("detailed: ", detailedResult);
  
   const renderPhaseTransitions = () => {
-    const transitions = detailedResult.comparison_result.interpretation.phase_transition_analysis || {};
+    const transitions = detailedResult?.comparison_result?.interpretation?.phase_transition_analysis || {};
     return (
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Phase Transitions</Text>
         <Text style={styles.phaseTransHeader}>User</Text>
-        <Text style={styles.phaseTransText}>{(transitions.video1_pattern?.description || [])}</Text>
-        <Text style={styles.phaseTransHeader}>{selectedPlayer.name}</Text>
-        <Text style={styles.phaseTransText}>{(transitions.video2_pattern?.description || [])}</Text>
+        <Text style={styles.phaseTransText}>{(transitions?.video1_pattern?.description || [])}</Text>
+        <Text style={styles.phaseTransHeader}>{selectedPlayer?.name}</Text>
+        <Text style={styles.phaseTransText}>{(transitions?.video2_pattern?.description || [])}</Text>
       </View>
     );
   };
 
   const renderInterpretation = () => {
-    const interp = detailedResult?.comparison_result.interpretation || {};
+    const interp = detailedResult?.comparison_result?.interpretation || {};
     return (
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Phase Interpretation</Text>
-        {Object.entries(interp.text_analysis || {}).map(([phase, details]) => (
+        {Object.entries(interp?.text_analysis || {}).map(([phase, details]) => (
           <View key={phase} style={styles.interpPhaseBlock}>
             <Text style={styles.interpPhaseTitle}>{phase.charAt(0).toUpperCase() + phase.slice(1)}</Text>
             {details.differences && details.differences.map((diff, idx) => (
@@ -42,15 +42,15 @@ const DetailedAnalysisScreen = ({ detailedResult, selectedPlayer }) => {
           </View>
         ))}
         {/* Phase transition analysis */}
-        {interp.phase_transition_analysis && (
+        {interp?.phase_transition_analysis && (
           <View style={styles.interpPhaseBlock}>
             <Text style={styles.interpPhaseTitle}>Phase Transition Analysis</Text>
-            <Text style={styles.interpDiffText}>User: {interp.phase_transition_analysis.video1_pattern?.description}</Text>
-            <Text style={styles.interpDiffText}>{selectedPlayer.name}: {interp.phase_transition_analysis.video2_pattern?.description}</Text>
-            {interp.phase_transition_analysis.comparison?.differences?.map((diff, idx) => (
+            <Text style={styles.interpDiffText}>User: {interp?.phase_transition_analysis?.video1_pattern?.description}</Text>
+            <Text style={styles.interpDiffText}>{selectedPlayer?.name}: {interp?.phase_transition_analysis?.video2_pattern?.description}</Text>
+            {interp?.phase_transition_analysis?.comparison?.differences?.map((diff, idx) => (
               <Text key={idx} style={styles.interpDiffText}>• {diff}</Text>
             ))}
-            {interp.phase_transition_analysis.comparison?.recommendations?.map((rec, idx) => (
+            {interp?.phase_transition_analysis?.comparison?.recommendations?.map((rec, idx) => (
               <Text key={idx} style={styles.interpRecText}>Recommendation: {rec}</Text>
             ))}
           </View>
@@ -66,7 +66,7 @@ const DetailedAnalysisScreen = ({ detailedResult, selectedPlayer }) => {
           <Text style={styles.title}>Detailed Analysis</Text>
           {selectedPlayer && (
             <Text style={styles.subtitle}>
-              Compared to {selectedPlayer.name}'s style
+              Compared to {selectedPlayer?.name}'s style
             </Text>
           )}
         </View>

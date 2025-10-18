@@ -10,10 +10,11 @@ from shooting_comparison.analysis_pipline import AnalysisPipeline
 from shooting_comparison.analysis_interpreter import AnalysisInterpreter
 from shooting_comparison.enhanced_pipeline import EnhancedShootingComparisonPipeline
 from backend.routes.llm_routes import LLMService
+from backend.config import PLAYER_IDS, PLAYERS
 
 try:
     from basketball_shooting_integrated_pipeline import BasketballShootingIntegratedPipeline
-    ANALYSIS_AVAILABLE = True
+    ANALYSIS_AVAILABLE = True 
 except ImportError:
     ANALYSIS_AVAILABLE = False
 
@@ -28,7 +29,7 @@ def clean_floats(obj):
         return obj
     else:
         return obj
-    
+
 def mock_analyze_video(video_path):
     return {
         "success": True,
@@ -138,6 +139,78 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
             "comparison_result": comparison_result,
             "llm_response": llm_response,
             "image_path": image_path
+        }
+        print("debug: Final results prepared")
+        results = clean_floats(results)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
+
+def auto_compare_service(video: UploadFile):
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+            shutil.copyfileobj(video.file, tmp_file)
+            video_path = tmp_file.name
+
+        if ANALYSIS_AVAILABLE:
+            pipeline = BasketballShootingIntegratedPipeline()
+            user_result = pipeline.run_full_pipeline(video_path, overwrite_mode=True, use_existing_extraction=False)
+        else:
+            user_result = mock_analyze_video(video_path)
+        print("debug: User video analyzed")
+        enhanced_pipeline = EnhancedShootingComparisonPipeline()
+        best_overall_score = -1
+        best_comparison_result = None
+        best_player_id = None
+        best_interpretation = None
+        for player_id in PLAYER_IDS:
+        
+            synthetic_base_path = f"output_dir/{player_id.lower()}"
+            comparison_result = enhanced_pipeline.run_comparison(
+                video_path, synthetic_base_path, save_results=True, include_dtw=True, create_visualizations=True, enable_shot_selection=False
+            )
+            # os.unlink(video_path)
+            print("debug: Comparison result obtained")
+            interpretation = comparison_result.get("interpretation", "No interpretation available")
+
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            output_dir = os.path.abspath(os.path.join(current_dir, "../../shooting_comparison/results"))
+            dtw_analysis = comparison_result.get("dtw_analysis", {})
+            overall_score = dtw_analysis.get("overall_similarity", 0)
+            if overall_score > best_overall_score:
+                best_overall_score = overall_score
+                best_comparison_result = comparison_result
+                best_player_id = player_id
+                best_interpretation = interpretation
+
+        os.unlink(video_path)
+        print("debug: best overall score", best_overall_score)
+        interpreter = AnalysisInterpreter()
+        llm_prompt = interpreter.generate_llm_prompt(best_interpretation)
+        prompt_file_name = f"llm_prompt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        prompt_path = os.path.join(output_dir, prompt_file_name)
+        print("debug: Saving LLM prompt to", prompt_path)
+        try:
+            with open(prompt_path, 'w', encoding='utf-8') as f:
+                f.write(llm_prompt)
+        except Exception as e:
+            print(f"   Error saving LLM prompt: {e}")
+
+        print("debug: Initializing LLMService with prompt path", prompt_path)
+        llm_service = LLMService(prompt_path)
+        print("debug: Generating LLM response")
+        llm_response = llm_service.generate_response()
+        print("debug: LLM response generated")
+        file_name = os.path.basename(video_path)
+        base_name = os.path.splitext(file_name)[0]
+        image_rel_path = f"dtw_viz_{base_name}_vs_{player_id}/trajectory_comparison.png"
+        image_path = f"/results/{image_rel_path}"
+        print("debug: Image path set to", image_path)
+        results = {
+            "comparison_result": best_comparison_result,
+            "llm_response": llm_response,
+            "image_path": image_path,
+            "selectedPlayer": PLAYERS.get(best_player_id, {})
         }
         print("debug: Final results prepared")
         results = clean_floats(results)

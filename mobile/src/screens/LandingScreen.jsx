@@ -1,17 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 
 const LandingScreen = ({ navigation }) => {
+
   const handleStartFilming = () => {
-    navigation.navigate('PlayerSelection'); // Navigate to player selection first
+    navigation.navigate('PlayerSelection');
   };
 
   const handleBasicAnalysis = () => {
-    navigation.navigate('Main'); // Navigate directly to camera for basic analysis
+    navigation.navigate('Main');
+  };
+
+  const handleAutoComparison = () => {
+    navigation.navigate('Main', { autoCompare: true });
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       {/* Logo or Banner */}
       <Image
         source={require('../assets/landing.png')}
@@ -27,6 +32,16 @@ const LandingScreen = ({ navigation }) => {
         Analyze your basketball shooting form with real-time feedback.
       </Text>
 
+      {/* Auto Comparison */}
+      <View style={{ width: '100%', alignItems: 'center', position: 'relative' }}>
+        <TouchableOpacity style={styles.autoButton} onPress={handleAutoComparison}>
+          <View style={styles.betaTagContainer}>
+            <Text style={styles.betaTag}>BETA</Text>
+          </View>
+          <Text style={styles.autoButtonText}>AutoFind the Matched Player</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Start Filming Button */}
       <TouchableOpacity style={styles.startButton} onPress={handleStartFilming}>
         <Text style={styles.startButtonText}>Compare with NBA Players</Text>
@@ -36,23 +51,22 @@ const LandingScreen = ({ navigation }) => {
       <TouchableOpacity style={styles.basicButton} onPress={handleBasicAnalysis}>
         <Text style={styles.basicButtonText}>Basic Analysis</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E', // Dark background
+    backgroundColor: '#1E1E1E',
     padding: 20,
   },
   logo: {
     width: 200,
     height: 200,
     marginBottom: 20,
-    
   },
   title: {
     fontSize: 28,
@@ -68,12 +82,49 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   startButton: {
-    backgroundColor: '#4ECDC4', // Teal color
+    backgroundColor: '#4ECDC4',
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 8,
+    // width: 280,
+    alignItems: 'center',
+    marginTop: 15,
   },
   startButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  betaTagContainer: {
+    position: 'absolute',
+    top: -10,
+    right: 10,
+    zIndex: 2,
+  },
+  betaTag: {
+    backgroundColor: '#FF6F61',
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    overflow: 'hidden',
+    letterSpacing: 1,
+    elevation: 2,
+  },
+  autoButton: {
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 8,
+    // width: 280,
+    alignItems: 'center',
+    marginTop: 15,
+    marginBottom: 0,
+    position: 'relative',
+  },
+  autoButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
@@ -86,6 +137,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#4ECDC4',
     marginTop: 15,
+    // width: 280,
+    alignItems: 'center',
   },
   basicButtonText: {
     fontSize: 18,

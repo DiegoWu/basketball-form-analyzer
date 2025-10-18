@@ -4,7 +4,7 @@ import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { CONFIG, getApiUrl } from '../utils/config';
 
 const CameraScreen = ({navigation, route}) => {
-  const { selectedPlayer } = route.params || {};
+  var { selectedPlayer } = route.params || {};
   const cameraRef = useRef(null);
   const [cameraPosition, setCameraPosition] = useState('back');
   const device = useCameraDevice(cameraPosition);
@@ -12,6 +12,7 @@ const CameraScreen = ({navigation, route}) => {
   const [hasPermission, setHasPermission] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const { autoCompare } = route.params || {};
   // Request camera permissions
   // useEffect(() => {
   //   const requestPermissions = async () => {
@@ -77,7 +78,8 @@ const CameraScreen = ({navigation, route}) => {
       }
 
       // Choose endpoint based on whether player is selected
-      const endpoint = selectedPlayer 
+      const endpoint = autoCompare 
+        ? CONFIG.BACKEND.ENDPOINTS.AUTO_MATCH_WITH_PLAYER : selectedPlayer 
         ? CONFIG.BACKEND.ENDPOINTS.COMPARE_WITH_PLAYER
         : CONFIG.BACKEND.ENDPOINTS.ANALYZE_VIDEO; // Fallback to existing endpoint
 
@@ -91,6 +93,8 @@ const CameraScreen = ({navigation, route}) => {
       });
 
       const result = await response.json();
+      if(autoCompare) selectedPlayer = result?.selectedPlayer;
+    
       console.log('Upload successful:', result);
       
       // Navigate to results with player comparison

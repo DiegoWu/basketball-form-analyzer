@@ -15,6 +15,17 @@ import DetailedAnalysisScreen from './DetailedAnalysisScreen'; // Adjust path if
 const { width, height } = Dimensions.get('window');
 import { initializeTtsListeners, playTTS } from '../utils/ttsListener';
 
+import axios from 'axios';
+
+const sendTwilioMessage = async (body, to) => {
+  try {
+    const response = await axios.post(`${CONFIG.BACKEND.BASE_URL}/send-sms`, { body, to });
+    return response.data;
+  } catch (error) {
+    return { status: 'error', error: error.message };
+  }
+};
+
 const ResultsScreen = ({ navigation, route }) => {
   const { analysisResult, selectedPlayer } = route.params || {};
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
@@ -25,9 +36,19 @@ const ResultsScreen = ({ navigation, route }) => {
     height: Dimensions.get('window').height
   });
 
+  const [smsStatus, setSmsStatus] = useState(null);
+
+  const handleSendSms = async () => {
+    const result = await sendTwilioMessage(
+      "Your analysis is ready!",
+      "+18777804236" // or get the user's phone number dynamically
+    );
+    setSmsStatus(result);
+  };
+
   useEffect(() => {
     initializeTtsListeners();
-
+    handleSendSms();
     setTimeout(() => {
       playTTS(analysisResult?.llm_response); 
     }, 3000);
@@ -169,20 +190,37 @@ const ResultsScreen = ({ navigation, route }) => {
           >
             <Text style={styles.actionButtonText}>View Detailed Analysis</Text>
           </TouchableOpacity>
-          
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('PlayerSelection')}
           >
             <Text style={styles.actionButtonText}>Try Another Player</Text>
           </TouchableOpacity>
-          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Main', { autoCompare: true })}
+          >
+            <Text style={styles.actionButtonText}>New Auto Select</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.secondaryButton]}
             onPress={() => navigation.navigate('Main')}
           >
             <Text style={styles.secondaryButtonText}>Record New Shot</Text>
           </TouchableOpacity>
+          
+          {smsStatus && (
+            <View style={{ margin: 20, padding: 10, backgroundColor: '#222', borderRadius: 8 }}>
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>
+                {smsStatus.status === 'sent'
+                  ? `SMS sent to ${smsStatus.to}: "${smsStatus.body}"`
+                  : `SMS error: ${smsStatus.error || 'Unknown error'}`}
+              </Text>
+              {smsStatus.sid && (
+                <Text style={{ color: '#888', fontSize: 12 }}>SID: {smsStatus.sid}</Text>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
 
