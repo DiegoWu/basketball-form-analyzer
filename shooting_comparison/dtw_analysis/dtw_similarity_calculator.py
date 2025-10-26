@@ -35,7 +35,6 @@ except ImportError:
     SCIPY_AVAILABLE = False
     print("Warning: scipy not available, using fallback implementations for global motion analysis")
 
-
 from .dtw_config import DTW_CONSTRAINTS, SIMILARITY_CONVERSION, SUBFEATURE_WEIGHTS
 
 class DTWSimilarityCalculator:
@@ -233,10 +232,10 @@ class DTWSimilarityCalculator:
             return {'similarity': 0.0, 'dtw_info': {'error': 'insufficient_data'}}
         
         # Separate X and Y components
-        x1 = [x for x, y in valid_traj1]
-        y1 = [y for x, y in valid_traj1]
-        x2 = [x for x, y in valid_traj2]
-        y2 = [y for x, y in valid_traj2]
+        x1 = [x for x, _ in valid_traj1]
+        y1 = [y for _, y in valid_traj1]
+        x2 = [x for x, _ in valid_traj2]
+        y2 = [y for _, y in valid_traj2]
         
         try:
             if self.dtw_available:
@@ -617,7 +616,7 @@ class DTWSimilarityCalculator:
         for phase in phases:
             phase1_frames = phase_frames1.get(phase, [])
             phase2_frames = phase_frames2.get(phase, [])
-            
+
             if not phase1_frames or not phase2_frames:
                 # Special handling for Loading phase when no frames are detected
                 if phase == 'Loading':
@@ -1758,8 +1757,8 @@ class DTWSimilarityCalculator:
         try:
             user_phases = user_data.get('phases', {})
             ref_phases = ref_data.get('phases', {})
-            print('debug user phases:', user_phases)
-            print('debug ref phases:', ref_phases)
+            # print('debug user phases:', user_phases)
+            # print('debug ref phases:', ref_phases)
             if not user_phases or not ref_phases:
                 return 50.0  # Default value
             
@@ -1793,7 +1792,7 @@ class DTWSimilarityCalculator:
         except Exception as e:
             print(f"      Warning: Phase timing calculation error: {e}")
             return 50.0
-    
+
     def _calculate_timing_relationship_metrics(self, user_data: Dict, ref_data: Dict) -> float:
         """Compare timing relationship metrics"""
         try:
@@ -1986,9 +1985,9 @@ class DTWSimilarityCalculator:
                 final_similarity = 60.0 + (data_hash % 20)  # 60-80 range
             
             final_similarity = max(40.0, min(100.0, final_similarity))
-            
+
             return final_similarity
-            
+
         except Exception as e:
             print(f"         Warning: Error in single frame similarity: {e}")
             # Deterministic fallback

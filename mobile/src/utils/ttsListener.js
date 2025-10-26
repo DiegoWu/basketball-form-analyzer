@@ -19,17 +19,17 @@ export const initializeTtsListeners = async () => {
   // The following commented-out code can be used to list available voices and set a default voice
   const voices = await Tts.voices()
   console.log(voices)
-  Tts.setDefaultVoice('com.apple.eloquence.en-US.Grandpa');
+  Tts.setDefaultVoice('com.apple.voice.compact.en-GB.Daniel');
   console.log('set voice');
   Tts.voices().then(voices => console.log(voices));
   // Set the default speaking rate. Lower values are slower, and higher values are faster
-  Tts.setDefaultRate(1.0, true);
+  // Tts.setDefaultRate(1.2, true);
 
   // Ignore the silent switch on the device, allowing TTS to play even if the device is set to silent
   Tts.setIgnoreSilentSwitch('ignore');
 
   // Set the default pitch. Lower values result in a lower pitch, and higher values in a higher pitch
-  Tts.setDefaultPitch(0.7);
+  // Tts.setDefaultPitch(0.7);
 
   // Set up listeners for various TTS events
 

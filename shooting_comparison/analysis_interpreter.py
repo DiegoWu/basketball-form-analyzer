@@ -1012,7 +1012,7 @@ class AnalysisInterpreter:
         # Compare setup point analysis
         setup1 = video1.get('setup_point_analysis', {})
         setup2 = video2.get('setup_point_analysis', {})
-        
+        print("debug : setup", setup1)
         if setup1 and setup2 and 'error' not in setup1 and 'error' not in setup2:
             # Compare arm angles at setup point
             arm_angles1 = setup1.get('arm_angles', {})

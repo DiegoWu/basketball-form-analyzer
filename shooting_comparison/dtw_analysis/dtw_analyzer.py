@@ -593,7 +593,7 @@ class DTWAnalyzer:
             weight = self.phase_weights.get(phase_name, 0.1)
             phase_similarity += similarity * weight
             total_phase_weight += weight
-        
+
         if total_phase_weight > 0:
             phase_similarity /= total_phase_weight
         

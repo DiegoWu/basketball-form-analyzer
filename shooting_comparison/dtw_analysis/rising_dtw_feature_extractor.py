@@ -53,7 +53,7 @@ class RisingDTWFeatureExtractor(SafeCoordinateMixin):
             return {'error': 'No frames available for Rising DTW feature extraction'}
         
         print(f"🔄 Extracting Rising DTW features from {len(frames)} frames...")
-        self.selected_hand = selected_hand.lower()
+        self.selected_hand = selected_hand
         
         # Get Rising + Loading-Rising frames
         rising_frames = self._get_rising_frames(frames)

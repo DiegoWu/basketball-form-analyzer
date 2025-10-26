@@ -42,8 +42,8 @@ class SetupAnalyzer:
         # Get FPS from metadata (default to 30fps)
         fps = video_data.get('metadata', {}).get('fps', 30.0)
         
-        # Calculate frame count based on FPS (30fps 기준 3프레임)
-        # 30fps에서 3프레임 = 0.1초, 다른 FPS에서도 같은 시간을 사용
+        # Calculate frame count based on FPS (3 frames at 30fps)
+        # 3 frames at 30fps = 0.1 seconds, use the same time duration for other FPS
         target_duration = 0.1  # 3 frames at 30fps = 0.1 seconds
         frame_count = max(1, int(fps * target_duration))
         
@@ -332,4 +332,4 @@ class SetupAnalyzer:
         cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
         angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
         
-        return np.degrees(angle) 
+        return np.degrees(angle)

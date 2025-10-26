@@ -44,16 +44,15 @@ class LoadingAnalyzer:
         # Find all Loading and Loading-Rising frames
         loading_frames = []
         loading_rising_frames = []
-        
+        all_loading_frames = []
         for frame in frames:
             phase = frame.get('phase', '')
             if phase == 'Loading':
                 loading_frames.append(frame)
+                all_loading_frames.append(frame)
             elif phase == 'Loading-Rising':
                 loading_rising_frames.append(frame)
-        
-        # Combine all loading-related frames
-        all_loading_frames = loading_frames + loading_rising_frames
+                all_loading_frames.append(frame)
         
         if not all_loading_frames:
             return {"error": "No Loading or Loading-Rising frames found"}

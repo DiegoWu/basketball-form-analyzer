@@ -117,7 +117,7 @@ class AnalysisPipeline:
         Extract frames grouped by phases
         
         Args:
-            data: Video analysis results
+        data: Video analysis results
             
         Returns:
             Dictionary with phase names as keys and frame lists as values

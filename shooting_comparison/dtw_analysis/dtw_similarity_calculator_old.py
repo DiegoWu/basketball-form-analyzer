@@ -163,10 +163,10 @@ class DTWSimilarityCalculator:
             return {'similarity': 0.0, 'dtw_info': {'error': 'insufficient_data'}}
         
         # Separate X and Y components
-        x1 = [x for x, y in valid_traj1]
-        y1 = [y for x, y in valid_traj1]
-        x2 = [x for x, y in valid_traj2]
-        y2 = [y for x, y in valid_traj2]
+        x1 = [x for x, _ in valid_traj1]
+        y1 = [y for _, y in valid_traj1]
+        x2 = [x for x, _ in valid_traj2]
+        y2 = [y for _, y in valid_traj2]
         
         try:
             if self.dtw_available:

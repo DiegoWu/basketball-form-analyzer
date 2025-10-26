@@ -134,8 +134,10 @@ class FollowThroughAnalyzer:
             pose = frame.get('normalized_pose', {})
             
             # Calculate overall angle standard deviation for this frame
-            overall_std = self._calculate_overall_angles_std(pose)
             
+            # print('debug frame idx:', frame.get('frame_index', -1))
+            overall_std = self._calculate_overall_angles_std(pose)
+            # print('debug follow-through form stability overall std:', overall_std)
             # Determine if frame is stable (std below threshold)
             is_stable = overall_std <= self.stability_threshold if overall_std is not None else False
             
@@ -456,15 +458,19 @@ class FollowThroughAnalyzer:
         
         # Arm angles
         shoulder_angle = self._calculate_shoulder_angle(pose)
+        # print('debug follow-through shoulder angle:', shoulder_angle)
         elbow_angle = self._calculate_elbow_angle(pose)
+        # print('debug follow-through elbow angle:', elbow_angle)
         # wrist_angle = self._calculate_wrist_angle(pose)
         
         # Body angles
         hip_angle = self._calculate_hip_angle(pose)
+        # print('debug follow-through hip angle:', hip_angle)
         knee_angle = self._calculate_knee_angle(pose)
+        # print('debug follow-through knee angle:', knee_angle)
         # ankle_angle = self._calculate_ankle_angle(pose)
         torso_angle = self._calculate_torso_angle(pose)
-        
+        # print('debug follow-through torso angle:', torso_angle)
         # Add all valid angles
         for angle in [shoulder_angle, elbow_angle, 
                      hip_angle, knee_angle, torso_angle]:

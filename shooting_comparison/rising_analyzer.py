@@ -47,7 +47,7 @@ class RisingAnalyzer:
         
         # Get FPS from metadata (default to 30fps)
         fps = video_data.get('metadata', {}).get('fps', 30.0)
-        self.selected_hand = selected_hand.lower()
+        self.selected_hand = selected_hand
         # Find all Rising and Loading-Rising frames
         rising_frames = []
         loading_rising_frames = []
@@ -71,7 +71,7 @@ class RisingAnalyzer:
             if phase == 'Loading':
                 loading_frames.append(frame)
         
-        print('debug: total rising frames:', len(all_rising_frames))
+        # print('debug: total rising frames:', len(all_rising_frames))
         # Analyze rising phase
         rising_analysis = {
             'fps': fps,
@@ -101,7 +101,7 @@ class RisingAnalyzer:
             Dictionary containing windup trajectory analysis
         """
         # Find dip point (lowest ball position)
-        print('debug: analyzing windup trajectory with', len(rising_frames), 'frames')
+        # print('debug: analyzing windup trajectory with', len(rising_frames), 'frames')
         dip_frame = self._find_dip_point(rising_frames)
         if not dip_frame:
             return {"error": "Dip point not found"}
@@ -122,7 +122,7 @@ class RisingAnalyzer:
         
         # Calculate trajectory curvature and path length
         ball_trajectory = normalized_trajectory['ball']
-        print('debug ball trajectory: ', ball_trajectory)
+        # print('debug ball trajectory: ', ball_trajectory)
         curvature = self._calculate_trajectory_curvature(ball_trajectory)
         path_length = self._calculate_trajectory_path_length(ball_trajectory)
         
@@ -707,7 +707,7 @@ class RisingAnalyzer:
             if denominator > 0:
                 curvature = numerator / denominator
                 curvatures.append(curvature)
-            print('debug curvature: ', numerator, denominator, curvature)
+            # print('debug curvature: ', numerator, denominator, curvature)
         return np.mean(curvatures) if curvatures else 0.0
     
     def _calculate_trajectory_path_length(self, trajectory: List[Dict]) -> float:
@@ -747,7 +747,7 @@ class RisingAnalyzer:
             Dictionary containing setup point analysis
         """
         # Find setup point using SetpointDetector
-        print("debug: analyzing setup point with", len(rising_frames), "frames")
+        # print("debug: analyzing setup point with", len(rising_frames), "frames")
         setup_frame = self._find_setup_point_using_setpoint_detector(rising_frames)
         if not setup_frame:
             return {"error": "Setup point not found"}
@@ -890,10 +890,10 @@ class SetpointDetector:
             List of frame indices where setpoints are detected
         """
 
-        print("Debug: starting setpoint detection...")
+        # print("Debug: starting setpoint detection...")
         if len(pose_data) < 10 or len(ball_data) < 10:
             return []
-        print("Debug: pass starting setpoint detection...")
+        # print("Debug: pass starting setpoint detection...")
         setpoints_with_scores = []  # Store (frame_idx, score) tuples
         
         # Analyze different metrics
@@ -928,8 +928,8 @@ class SetpointDetector:
                 ball_position_changes, ball_trajectory_curvatures,
                 wrist_accelerations, phase_transitions
             )
-            print("debug setpoint score at frame", i, ":", score)
-            print("debug setpoint count:", cnt)
+            # print("debug setpoint score at frame", i, ":", score)
+            # print("debug setpoint count:", cnt)
             if score > 0.1:  # Threshold for setpoint detection
                 setpoints_with_scores.append((i, score))
                 
@@ -941,9 +941,9 @@ class SetpointDetector:
         # Sort by score (highest first) and filter
         setpoints_with_scores.sort(key=lambda x: x[1], reverse=True)
         setpoints = self._filter_setpoints_by_score(setpoints_with_scores, pose_data, ball_data)
-        print("Debug: detected setpoints at frames:", setpoints)
+        # print("Debug: detected setpoints at frames:", setpoints)
         return setpoints
-    
+
     def _log_setpoint_details(self, frame_idx: int, ball_velocity_changes: List[float],
                              wrist_angle_changes: List[float], ball_position_changes: List[float],
                              ball_trajectory_curvatures: List[float], wrist_accelerations: List[float],
@@ -974,12 +974,12 @@ class SetpointDetector:
         acceleration_score = min(abs(acceleration_raw) / self.setpoint_thresholds['wrist_acceleration'], 1.0)
         
         # Logging removed - no print statements
-        print(f"Log setpoint details: Frame {frame_idx}: Total Score={total_score:.3f}, "
-                f"Velocity Score={velocity_score:.3f} (Raw: {velocity_raw:.3f}), "
-                f"Angle Score={angle_score:.3f} (Raw: {angle_raw:.3f}), "
-                f"Position Score={position_score:.3f} (Raw: {   position_raw:.3f}), "
-                f"Curvature Score={curvature_score:.3f} (Raw: {curvature_raw:.3f}), "
-                f"Acceleration Score={acceleration_score:.3f} (Raw: {acceleration_raw:.3f})")   
+        # print(f"Log setpoint details: Frame {frame_idx}: Total Score={total_score:.3f}, "
+        #         f"Velocity Score={velocity_score:.3f} (Raw: {velocity_raw:.3f}), "
+        #         f"Angle Score={angle_score:.3f} (Raw: {angle_raw:.3f}), "
+        #         f"Position Score={position_score:.3f} (Raw: {   position_raw:.3f}), "
+        #         f"Curvature Score={curvature_score:.3f} (Raw: {curvature_raw:.3f}), "
+        #         f"Acceleration Score={acceleration_score:.3f} (Raw: {acceleration_raw:.3f})")   
     
     def _is_rising_phase(self, pose_frame: Dict) -> bool:
         """
