@@ -34,8 +34,13 @@ Open `ios/StickmanDancingApp/Info.plist` and add the required Camera Permissions
 
 To use the CoreML GPU Delegate, add this to your `ios/Podfile`:
 ```bash
+
+
 $EnableCoreMLDelegate=true
 ```
+
+Make sure local ip is set in config.js
+
 ### Android setup
 
 `TODO`
@@ -98,6 +103,10 @@ pip install -r requirements.txt
 cd ..
 python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 # in conda environment
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 # local environment
+
+# Alternatively, one can also use docker and run 
+
+docker run -p 8000:8000 --env-file .env -v ./data:/app/data basketball-backend 
 ```
 
 ---

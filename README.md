@@ -25,29 +25,28 @@ A comprehensive basketball shooting form analysis system that compares user vide
 
 ## 🚀 Quick Start
 
-### **1. Backend Setup**
+### **1. functionality check
+
+1. Basketball Shooting Integrated Pipeline
+* End to end from raw video to shooting motion
+* command
 
 ```bash
-# Install dependencies
-cd backend
-pip install -r requirements.txt
-
-# Start the server
-python main.py
+cd ./
+python basketball_shooting_integrated_pipeline.py 
 ```
 
-The backend will be available at `http://localhost:8000`
+2. Basketball Shooting Comparison Pipeline
+* Compare two shooting motion and output similarity scores as well as coaching advise
+* command
+
+```bash
+python -m shooting_comparison.enhanced_pipeline                       
+```
 
 ### **2. Mobile App Setup**
 
-```bash
-# Install dependencies
-cd mobile-frontend
-npm install
-
-# Start the development server
-npx expo start
-```
+Please refer to mobile/README.md for more details
 
 ### **3. Generate Synthetic Profiles**
 
