@@ -140,7 +140,7 @@ basketball-form-analyzer/
 
 ## Notes
 
-### Currently the target should always be at the center of the screen for model detections
+<!-- ### Currently the target should always be at the center of the screen for model detections
 
 
 Correct
@@ -159,7 +159,7 @@ Screen Width
 |----------------------------------------|
 
 Here, part of the target is **cut off** due to lack of full-screen resizing.
-```
+``` -->
 
 
 ### If ever encounter the issue folly/experimental/coro/Coroutine.h' file not found on IOS build
