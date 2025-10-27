@@ -42,6 +42,7 @@ steps:
       - '--no-cpu-throttling'
       - '--min-instances=0'
       - '--max-instances=3'
+      - '--startup-cpu-boost'
       - '--set-env-vars=TF_CPP_MIN_LOG_LEVEL=3,CUDA_VISIBLE_DEVICES=-1,TF_ENABLE_ONEDNN_OPTS=0,PYTHONUNBUFFERED=1'
       - '--set-secrets=OPENAI_API_KEY=openai-api-key:latest,PROMPT_ID=prompt-id:latest'
     id: 'deploy-cloud-run'
