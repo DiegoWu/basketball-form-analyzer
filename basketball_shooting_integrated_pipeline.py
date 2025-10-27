@@ -143,8 +143,49 @@ class BasketballShootingIntegratedPipeline:
         print(f"✅ Ball extraction completed: {os.path.basename(ball_file)}")
         return ball_file
     
+    # def _extract_original_data(self, video_path: str, overwrite_mode: bool = False, use_existing_extraction: bool = True) -> bool:
+    #     """Extract original data with coordinate transformation (pose + ball)"""
+    #     base_name = os.path.splitext(os.path.basename(video_path))[0] 
+        
+    #     pose_original_file = os.path.join(self.extracted_data_dir, f"{base_name}_pose_original.json")
+    #     ball_original_file = os.path.join(self.extracted_data_dir, f"{base_name}_ball_original.json")
+        
+    #     if use_existing_extraction and (os.path.exists(pose_original_file) or os.path.exists(ball_original_file)):
+    #         print(f"⚠️ Using existing extraction data:")
+    #         if os.path.exists(pose_original_file):
+    #             print(f"  - Pose data: {os.path.basename(pose_original_file)}")
+    #         if os.path.exists(ball_original_file):
+    #             print(f"  - Ball data: {os.path.basename(ball_original_file)}")
+    #         return True
+        
+    #     # If overwrite_mode is True, always extract new data
+    #     if not use_existing_extraction and not overwrite_mode and (os.path.exists(pose_original_file) or os.path.exists(ball_original_file)):
+    #         choice = input("Overwrite and extract new data? (y/n): ").strip().lower()
+    #         if choice != 'y':
+    #             print("Using existing data.")
+    #             return True
+        
+    #     try:
+    #             # Use ThreadPoolExecutor for parallel execution
+    #         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    #             # Submit both extraction tasks
+    #             pose_future = executor.submit(self._extract_pose, video_path)
+    #             ball_future = executor.submit(self._extract_ball, video_path)
+                
+    #             # Wait for both to complete and get results
+    #             pose_file = pose_future.result()
+    #             ball_file = ball_future.result()
+                
+    #             print("🔄 Both pose and ball extraction completed in parallel")
+            
+    #         return True
+    
+    #     except Exception as e:
+    #         print(f"❌ Failed to extract data: {e}")
+    #         return False
+
     def _extract_original_data(self, video_path: str, overwrite_mode: bool = False, use_existing_extraction: bool = True) -> bool:
-        """Extract original data with coordinate transformation (pose + ball)"""
+        """Extract original data sequentially for Cloud Run stability"""
         base_name = os.path.splitext(os.path.basename(video_path))[0]
         
         pose_original_file = os.path.join(self.extracted_data_dir, f"{base_name}_pose_original.json")
@@ -158,30 +199,26 @@ class BasketballShootingIntegratedPipeline:
                 print(f"  - Ball data: {os.path.basename(ball_original_file)}")
             return True
         
-        # If overwrite_mode is True, always extract new data
+        # Remove interactive prompt for Cloud Run
         if not use_existing_extraction and not overwrite_mode and (os.path.exists(pose_original_file) or os.path.exists(ball_original_file)):
-            choice = input("Overwrite and extract new data? (y/n): ").strip().lower()
-            if choice != 'y':
-                print("Using existing data.")
-                return True
+            print("⚠️ Using existing data (non-interactive mode for Cloud Run)")
+            return True
         
         try:
-                # Use ThreadPoolExecutor for parallel execution
-            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                # Submit both extraction tasks
-                pose_future = executor.submit(self._extract_pose, video_path)
-                ball_future = executor.submit(self._extract_ball, video_path)
-                
-                # Wait for both to complete and get results
-                pose_file = pose_future.result()
-                ball_file = ball_future.result()
-                
-                print("🔄 Both pose and ball extraction completed in parallel")
+            # ✅ SEQUENTIAL EXECUTION - Fixes GPU/CPU conflicts
+            print("🔍 Starting pose extraction...")
+            pose_file = self._extract_pose(video_path)
             
+            print("🔍 Starting ball extraction...")
+            ball_file = self._extract_ball(video_path)
+            
+            print("✅ Both extractions completed sequentially")
             return True
-    
+
         except Exception as e:
             print(f"❌ Failed to extract data: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def get_folder_name_from_path(self, video_path: str) -> str:
