@@ -1,10 +1,10 @@
-# Basketball Form Analyzer with Synthetic Motion Profiles
+# Basketball Form Analyzer
 
 A comprehensive basketball shooting form analysis system that compares user videos with synthetic NBA player motion profiles. This system provides real-time feedback and detailed phase-by-phase analysis of shooting mechanics.
 
-## 🏀 Features
+## Features
 
-### **Synthetic Motion Profiles**
+### **Motion Profiles**
 - **5 NBA Player Styles**: LeBron James, Stephen Curry, Kevin Durant, Kawhi Leonard, James Harden
 - **Realistic Biomechanics**: Each player has unique motion characteristics and phase distributions
 - **6 Shooting Phases**: General, Set-up, Loading, Rising, Release, Follow-through
@@ -23,9 +23,10 @@ A comprehensive basketball shooting form analysis system that compares user vide
 - **Comparison Engine**: Compare user videos with synthetic player data
 - **RESTful Endpoints**: Easy integration with mobile and web clients
 
-## 🚀 Quick Start
+## Quick Start
 
-### **1. functionality check
+
+### **1. functionality check**
 
 1. Basketball Shooting Integrated Pipeline
 * End to end from raw video to shooting motion
@@ -48,15 +49,8 @@ python -m shooting_comparison.enhanced_pipeline
 
 Please refer to mobile/README.md for more details
 
-### **3. Generate Synthetic Profiles**
 
-```bash
-# Generate profiles for all players
-cd synthetic_profiles
-python motion_profile_generator.py
-```
-
-## 📱 Mobile App Flow
+## Mobile App Flow
 
 1. **Player Selection**: Choose an NBA player to compare against
 2. **Video Recording**: Record your basketball shot
@@ -64,20 +58,7 @@ python motion_profile_generator.py
 4. **Results**: View similarity scores and recommendations
 5. **Improvement**: Get specific feedback for each shooting phase
 
-## 🔧 API Endpoints
-
-### **Analysis Endpoints**
-- `POST /analysis/analyze-video` - Basic video analysis
-- `POST /analysis/compare-with-player` - Compare with specific player
-
-### **Synthetic Data Endpoints**
-- `GET /synthetic/player-profiles` - Get available player profiles
-- `POST /synthetic/generate-profile` - Generate specific player profile
-
-### **Health Check**
-- `GET /health` - Server health and capabilities
-
-## 🎯 Player Styles
+## Player Styles
 
 ### **LeBron James**
 - **Style**: Power-based, athletic motion
@@ -109,7 +90,7 @@ python motion_profile_generator.py
 - **Motion Curve**: Smooth S-curve
 - **Frame Count**: 87 frames
 
-## 📊 Analysis Results
+## Analysis Results
 
 The system provides:
 
@@ -118,75 +99,8 @@ The system provides:
 - **Recommendations**: Specific improvement suggestions
 - **Comparison Metrics**: Motion consistency, release timing, follow-through
 
-## 🛠️ Technical Architecture
 
-### **Frontend (React Native)**
-- Camera integration with Expo
-- Real-time video recording
-- Player selection interface
-- Results visualization
-
-### **Backend (FastAPI)**
-- Video processing pipeline
-- Synthetic profile generation
-- Comparison algorithms
-- RESTful API endpoints
-
-### **Synthetic Profiles**
-- Biomechanically accurate motion data
-- Normalized coordinates with noise simulation
-- JSON export format
-- Caching for performance
-
-## 🔄 Integration Flow
-
-1. **User selects NBA player** → Mobile app sends player ID
-2. **User records shot** → Video uploaded to backend
-3. **Backend processes video** → Pose detection and phase segmentation
-4. **Synthetic profile loaded** → Player-specific motion data retrieved
-5. **Comparison executed** → Similarity scores calculated
-6. **Results returned** → Mobile app displays analysis
-
-## 📁 Project Structure
-
-```
-basketball-form-analyzer/
-├── mobile-frontend/          # React Native mobile app
-│   ├── CameraScreen.js       # Video recording interface
-│   ├── PlayerSelectionScreen.js  # Player selection
-│   ├── ResultsScreen.js      # Analysis results display
-│   └── config.js            # App configuration
-├── backend/                  # FastAPI backend
-│   ├── main.py              # Main server file
-│   └── requirements.txt     # Python dependencies
-├── synthetic_profiles/       # Synthetic data generation
-│   ├── motion_profile_generator.py  # Profile generator
-│   └── README.md            # Synthetic profiles documentation
-└── README.md                # This file
-```
-
-## 🎮 Usage Examples
-
-### **Basic Analysis**
-```bash
-curl -X POST "http://localhost:8000/analysis/analyze-video" \
-  -F "video=@shot.mp4"
-```
-
-### **Player Comparison**
-```bash
-curl -X POST "http://localhost:8000/analysis/compare-with-player" \
-  -F "video=@shot.mp4" \
-  -F "player_id=curry" \
-  -F "player_style=quick"
-```
-
-### **Get Player Profiles**
-```bash
-curl "http://localhost:8000/synthetic/player-profiles"
-```
-
-## 🔮 Future Enhancements
+## Future Enhancements
 
 - **More Players**: Additional NBA player profiles
 - **Custom Profiles**: User-generated motion profiles
@@ -202,18 +116,14 @@ curl "http://localhost:8000/synthetic/player-profiles"
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
+## License
 
 This repository is released under a **source-available, non-commercial license**.  
 See [LICENSE](./LICENSE) and [EULA.md](./EULA.md) for full terms.
 
-## 🆘 Support
+## Support
 
 For questions or issues:
 1. Check the documentation
 2. Review existing issues
 3. Create a new issue with detailed information
-
----
-
-**Built with ❤️ for basketball players everywhere** 

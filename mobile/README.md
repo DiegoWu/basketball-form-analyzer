@@ -5,7 +5,7 @@ This project is a **React Native mobile application** for analyzing basketball s
 
 ---
 
-## 🚀 Features
+## Features
 - Real-time **pose detection** using MoveNet Thunder.
 - **Object detection** using YOLOv8n (TFLite).
 - Frame-by-frame **data collection** and visualization.
@@ -14,7 +14,7 @@ This project is a **React Native mobile application** for analyzing basketball s
 
 ---
 
-## 📱 Mobile App Setup
+## Mobile App Setup
 
 ### Requirements
 - Node.js (>= 14.x)
@@ -77,7 +77,7 @@ yarn android
 
 ---
 
-## 🖥️ Backend Setup
+## Backend Setup
 
 The mobile app communicates with a **FastAPI** backend for pose and detection data processing.
 
