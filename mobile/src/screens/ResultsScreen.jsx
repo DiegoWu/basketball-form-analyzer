@@ -11,7 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { CONFIG, getSimilarityColor, getSimilarityLabel } from '../utils/config';
-import DetailedAnalysisScreen from './DetailedAnalysisScreen'; // Adjust path if needed
+import DetailedAnalysisScreen from './DetailedAnalysisScreen';
 const { width, height } = Dimensions.get('window');
 import { initializeTtsListeners, playTTS } from '../utils/ttsListener';
 
@@ -41,19 +41,44 @@ const ResultsScreen = ({ navigation, route }) => {
   const handleSendSms = async () => {
     const result = await sendTwilioMessage(
       "Your analysis is ready!",
-      "+18777804236" // or get the user's phone number dynamically
+      "+18777804236"
     );
     setSmsStatus(result);
   };
 
+  // Check if shooting form was detected
+  const isFormDetected = () => {
+    if (!analysisResult) return false;
+    
+    // Check for error messages
+    if (analysisResult.error || analysisResult.status === 'error') {
+      return false;
+    }
+    
+    // Check if comparison result exists
+    if (!analysisResult.comparison_result) {
+      return false;
+    }
+    
+    // Check if DTW analysis exists and has valid data
+    const dtwAnalysis = analysisResult.comparison_result?.dtw_analysis;
+    if (!dtwAnalysis || !dtwAnalysis.overall_similarity) {
+      return false;
+    }
+    
+    return true;
+  };
+
   useEffect(() => {
     initializeTtsListeners();
-    handleSendSms();
-    setTimeout(() => {
-      playTTS(analysisResult?.llm_response); 
-    }, 3000);
     
-    // Fix for Dimensions API - use the newer subscription-based API
+    if (isFormDetected()) {
+      handleSendSms();
+      setTimeout(() => {
+        playTTS(analysisResult?.llm_response); 
+      }, 3000);
+    }
+    
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
       setScreenDimensions({
         width: window.width,
@@ -61,7 +86,6 @@ const ResultsScreen = ({ navigation, route }) => {
       });
     });
     
-    // Clean up properly using the subscription object
     return () => {
       if (subscription?.remove) {
         subscription.remove();
@@ -90,7 +114,7 @@ const ResultsScreen = ({ navigation, route }) => {
   };
 
   const renderOverallScore = () => {
-    const overallScore = analysisResult?.comparison_result?.dtw_analysis?.overall_similarity || 50;
+    const overallScore = analysisResult?.comparison_result?.dtw_analysis?.overall_similarity || 0;
     const color = getSimilarityColor(overallScore);
     const label = getSimilarityLabel(overallScore);
     
@@ -130,21 +154,16 @@ const ResultsScreen = ({ navigation, route }) => {
   };
 
   const renderPhaseBreakdown = () => {
-    
     const phaseScores = analysisResult?.comparison_result?.dtw_analysis?.phase_similarities || {};
   
     return (
       <View style={styles.phaseBreakdownContainer}>
         <Text style={styles.phaseBreakdownTitle}>Phase-by-Phase Analysis</Text>
         {Object.entries(phaseScores).map(([phase, data]) => {
-          const score = (data.similarity ?? 50) / 100; // Convert to 0-1 range for progress bar
+          const score = (data.similarity ?? 50) / 100;
           return (
             <View key={phase} style={styles.phaseScoreContainer}>
               {renderPhaseScore(phase, score)}
-              {/* <Text style={styles.phaseDetail}>
-                Frames: {data.frame_count_1} vs {data.frame_count_2} | Features: {data.feature_count}
-              </Text>
-              <Text style={styles.phaseNote}>{data.note}</Text> */}
             </View>
           );
         })}
@@ -152,12 +171,100 @@ const ResultsScreen = ({ navigation, route }) => {
     );
   };
 
-  // Function to open image in modal
   const openImageViewer = (imagePath) => {
     setCurrentImagePath(imagePath);
     setIsImageModalVisible(true);
   };
 
+  // Render error state when shooting form is not detected
+  const renderErrorState = () => {
+    const errorMessage = analysisResult?.error || analysisResult?.message || "Shooting form not detected";
+    
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.errorScrollContent}>
+          <View style={styles.errorContainer}>
+            <View style={styles.errorIconContainer}>
+              <Text style={styles.errorIcon}>⚠️</Text>
+            </View>
+            
+            <Text style={styles.errorTitle}>Shooting Form Not Detected</Text>
+            
+            <Text style={styles.errorMessage}>
+              {errorMessage}
+            </Text>
+            
+            <View style={styles.errorTipsContainer}>
+              <Text style={styles.errorTipsTitle}>Tips for better detection:</Text>
+              
+              <View style={styles.errorTipItem}>
+                <Text style={styles.errorTipBullet}>•</Text>
+                <Text style={styles.errorTipText}>
+                  Ensure you're in <Text style={styles.errorTipHighlight}>side view</Text> to the camera
+                </Text>
+              </View>
+              
+              <View style={styles.errorTipItem}>
+                <Text style={styles.errorTipBullet}>•</Text>
+                <Text style={styles.errorTipText}>
+                  Keep your <Text style={styles.errorTipHighlight}>full body visible</Text> in frame
+                </Text>
+              </View>
+              
+              <View style={styles.errorTipItem}>
+                <Text style={styles.errorTipBullet}>•</Text>
+                <Text style={styles.errorTipText}>
+                  Make sure the <Text style={styles.errorTipHighlight}>basketball is visible</Text>
+                </Text>
+              </View>
+              
+              <View style={styles.errorTipItem}>
+                <Text style={styles.errorTipBullet}>•</Text>
+                <Text style={styles.errorTipText}>
+                  Use <Text style={styles.errorTipHighlight}>good lighting</Text> without shadows
+                </Text>
+              </View>
+              
+              <View style={styles.errorTipItem}>
+                <Text style={styles.errorTipBullet}>•</Text>
+                <Text style={styles.errorTipText}>
+                  Stand <Text style={styles.errorTipHighlight}>10-15 feet away</Text> from camera
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.errorActionsContainer}>
+              <TouchableOpacity
+                style={styles.errorPrimaryButton}
+                onPress={() => navigation.navigate('Main')}
+              >
+                <Text style={styles.errorPrimaryButtonText}>Try Recording Again</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.errorSecondaryButton}
+                onPress={() => navigation.navigate('FAQ')}
+              >
+                <Text style={styles.errorSecondaryButtonText}>View FAQ for Help</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.errorTertiaryButton}
+                onPress={() => navigation.navigate('Landing')}
+              >
+                <Text style={styles.errorTertiaryButtonText}>Back to Home</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  };
+
+  // Check if form was detected, if not show error state
+  if (!isFormDetected()) {
+    return renderErrorState();
+  }
     
   return (
     <SafeAreaView style={styles.container}>
@@ -176,7 +283,6 @@ const ResultsScreen = ({ navigation, route }) => {
         {renderPhaseBreakdown()}
 
         <View style={styles.actionsContainer}>
-          {/* Image viewer button - placed above detailed analysis */}
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => openImageViewer(analysisResult?.image_path)}
@@ -242,7 +348,7 @@ const ResultsScreen = ({ navigation, route }) => {
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
-            < DetailedAnalysisScreen
+            <DetailedAnalysisScreen
               detailedResult={analysisResult} 
               selectedPlayer={selectedPlayer}
             />
@@ -276,7 +382,6 @@ const ResultsScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
             
-            {/* Fix ScrollView layout issue by removing style props from ScrollView and putting them in contentContainerStyle */}
             <ScrollView
               style={styles.imageScrollContainer}
               contentContainerStyle={styles.imageContentContainer}
@@ -311,6 +416,127 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  errorScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  errorIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  errorIcon: {
+    fontSize: 64,
+  },
+  errorTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FF3B30',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 20,
+    lineHeight: 24,
+  },
+  errorTipsContainer: {
+    backgroundColor: 'rgba(30, 30, 30, 0.8)',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(78, 205, 196, 0.3)',
+    width: '100%',
+  },
+  errorTipsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4ECDC4',
+    marginBottom: 16,
+  },
+  errorTipItem: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  errorTipBullet: {
+    fontSize: 20,
+    color: '#4ECDC4',
+    marginRight: 12,
+    marginTop: -2,
+  },
+  errorTipText: {
+    fontSize: 15,
+    color: '#CCCCCC',
+    flex: 1,
+    lineHeight: 22,
+  },
+  errorTipHighlight: {
+    color: '#4ECDC4',
+    fontWeight: '600',
+  },
+  errorActionsContainer: {
+    width: '100%',
+    gap: 12,
+  },
+  errorPrimaryButton: {
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  errorPrimaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  errorSecondaryButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4ECDC4',
+  },
+  errorSecondaryButtonText: {
+    color: '#4ECDC4',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  errorTertiaryButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  errorTertiaryButtonText: {
+    color: '#888888',
+    fontSize: 16,
+    fontWeight: '500',
   },
   header: {
     padding: 20,
@@ -426,26 +652,6 @@ const styles = StyleSheet.create({
   phaseLabel: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  recommendationsContainer: {
-    backgroundColor: '#1a1a1a',
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-  },
-  recommendationsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 12,
-  },
-  recommendationItem: {
-    marginBottom: 8,
-  },
-  recommendationText: {
-    fontSize: 14,
-    color: '#ccc',
-    lineHeight: 20,
   },
   actionsContainer: {
     padding: 20,

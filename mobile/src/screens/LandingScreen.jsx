@@ -15,6 +15,10 @@ const LandingScreen = ({ navigation }) => {
     navigation.navigate('Main', { autoCompare: true });
   };
 
+  const handleFAQ = () => {
+    navigation.navigate('FAQ');
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Logo or Banner */}
@@ -25,7 +29,7 @@ const LandingScreen = ({ navigation }) => {
       />
 
       {/* Title */}
-      <Text style={styles.title}>Basketball Form Analyzer</Text>
+      <Text style={styles.title}>AI Basketball Shooting Coach</Text>
 
       {/* Subtitle */}
       <Text style={styles.subtitle}>
@@ -46,10 +50,15 @@ const LandingScreen = ({ navigation }) => {
       <TouchableOpacity style={styles.startButton} onPress={handleStartFilming}>
         <Text style={styles.startButtonText}>Compare with NBA Players</Text>
       </TouchableOpacity>
-
-      {/* Basic Analysis Button */}
+{/* 
+      Basic Analysis Button
       <TouchableOpacity style={styles.basicButton} onPress={handleBasicAnalysis}>
         <Text style={styles.basicButtonText}>Basic Analysis</Text>
+      </TouchableOpacity> */}
+
+      {/* FAQ Button */}
+      <TouchableOpacity style={styles.faqButton} onPress={handleFAQ}>
+        <Text style={styles.faqButtonText}>FAQ</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -86,7 +95,6 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 8,
-    // width: 280,
     alignItems: 'center',
     marginTop: 15,
   },
@@ -118,7 +126,6 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 8,
-    // width: 280,
     alignItems: 'center',
     marginTop: 15,
     marginBottom: 0,
@@ -137,13 +144,24 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#4ECDC4',
     marginTop: 15,
-    // width: 280,
     alignItems: 'center',
   },
   basicButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#4ECDC4',
+  },
+  faqButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  faqButtonText: {
+    fontSize: 16,
+    color: '#AAAAAA',
+    fontWeight: '600',
   },
 });
 
