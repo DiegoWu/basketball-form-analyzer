@@ -204,7 +204,8 @@ curl "http://localhost:8000/synthetic/player-profiles"
 
 ## 📄 License
 
-This project cannot be used in any commercial circumstances.
+This repository is released under a **source-available, non-commercial license**.  
+See [LICENSE](./LICENSE) and [EULA.md](./EULA.md) for full terms.
 
 ## 🆘 Support
 
