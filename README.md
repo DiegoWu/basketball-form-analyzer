@@ -204,7 +204,7 @@ curl "http://localhost:8000/synthetic/player-profiles"
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project cannot be used in any commercial circumstances.
 
 ## 🆘 Support
 
