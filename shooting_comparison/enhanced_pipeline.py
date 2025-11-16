@@ -10,10 +10,11 @@ import glob
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 import numpy as np
-
+import traceback
 from .shooting_comparison_pipeline import ShootingComparisonPipeline
 from .analysis_interpreter import AnalysisInterpreter
 from .dtw_interpreter_extension import DTWInterpreterExtension
+from .dtw_analysis.dtw_visualizer import DTWVisualizer
 
 class NumpyEncoder(json.JSONEncoder):
     """Custom JSON encoder for numpy types"""
@@ -89,39 +90,7 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
             print("   📹 Processing video data...")
             existing_pipeline.video1_data = existing_pipeline.process_video_data(video1_path)
             existing_pipeline.video2_data = existing_pipeline.process_video_data(video2_path)
-            
-            # If video data processing failed, try to load from other sources
-            if not existing_pipeline.video1_data or not existing_pipeline.video2_data:
-                print("   ⚠️ Video data not found in standard location, trying alternative sources...")
-                
-                # Try to load from basketball_shooting_analyzer results
-                base_name1 = self._get_base_name(video1_path)
-                base_name2 = self._get_base_name(video2_path)
-                
-                # Check for analyzer results
-                analyzer_result1 = f"data/results/{base_name1}_normalized_output.json"
-                analyzer_result2 = f"data/results/{base_name2}_normalized_output.json"
-                
-                if os.path.exists(analyzer_result1) and os.path.exists(analyzer_result2):
-                    print("   📄 Found analyzer results, loading...")
-                    with open(analyzer_result1, 'r') as f:
-                        existing_pipeline.video1_data = json.load(f)
-                    with open(analyzer_result2, 'r') as f:
-                        existing_pipeline.video2_data = json.load(f)
-                    
-                    # Set metadata
-                    existing_pipeline.video1_metadata = existing_pipeline.video1_data.get('metadata', {})
-                    existing_pipeline.video2_metadata = existing_pipeline.video2_data.get('metadata', {})
-                    
-                    print(f"   ✅ Loaded video data from analyzer results")
-                else:
-                    print("❌ Failed to find video data for analysis")
-                    print(f"   🔍 Expected files:")
-                    print(f"      - {analyzer_result1}")
-                    print(f"      - {analyzer_result2}")
-                    print(f"   💡 Please run the integrated pipeline first to process these videos.")
-                    return {'error': 'Video data not found for analysis'}
-            
+
             # Set metadata for analyzers
             existing_pipeline.video1_metadata = existing_pipeline.video1_data.get('metadata', {})
             existing_pipeline.video2_metadata = existing_pipeline.video2_data.get('metadata', {})
@@ -192,7 +161,6 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
             
         except Exception as e:
             print(f"❌ Phase analysis failed: {e}")
-            import traceback
             traceback.print_exc()
             return {'error': f'Phase analysis failed: {str(e)}'}
         
@@ -250,7 +218,6 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
             # Use video data from existing pipeline
             video1_data = existing_pipeline.video1_data
             video2_data = existing_pipeline.video2_data
-            
             if video1_data and video2_data:
                 selected_hand = existing_results.get('metadata', {}).get('selected_hand', 'right')
                 print(f"   🤚 Using {selected_hand} hand analysis")
@@ -297,15 +264,7 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
                         final_results['grade'] = dtw_analysis.get('grade', 'N/A')
                         final_results['confidence'] = dtw_analysis.get('metadata', {}).get('analysis_confidence', 'Unknown')
                         print(f"✅ Updated overall similarity to {dtw_analysis['overall_similarity']:.1f}% from DTW analysis")
-                
-                # Remove frame data from final results to reduce file size
-                if 'video1_data' in final_results and 'frames' in final_results['video1_data']:
-                    final_results['video1_data']['frames'] = []
-                    print("✅ Removed video1 frame data from final results")
-                if 'video2_data' in final_results and 'frames' in final_results['video2_data']:
-                    final_results['video2_data']['frames'] = []
-                    print("✅ Removed video2 frame data from final results")
-                
+                                
                 print("✅ DTW analysis completed and integrated successfully")
                 
                 # Create DTW visualizations if requested
@@ -314,12 +273,6 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
                     print(f"   🔍 Debug: create_visualizations = {create_visualizations}")
                     
                     try:
-                        # Try to import visualizer
-                        try:
-                            from .dtw_analysis.dtw_visualizer import DTWVisualizer
-                        except ImportError:
-                            from dtw_analysis.dtw_visualizer import DTWVisualizer
-                        
                         print("   ✅ DTWVisualizer imported successfully")
                         
                         # Check if we have the required DTW results
@@ -348,18 +301,21 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
                                     print(f"      📁 {viz_type}: {file_path}")
                         else:
                             print("   ⚠️ No visualization files were created")
-                            
+                    
                     except ImportError as import_error:
                         print(f"   ❌ Import error: {import_error}")
                         final_results['metadata']['visualization_error'] = f'Import error: {str(import_error)}'
                     except Exception as viz_error:
                         print(f"   ❌ Visualization creation failed: {viz_error}")
                         print(f"   🔍 Error type: {type(viz_error).__name__}")
-                        import traceback
                         print(f"   📜 Traceback: {traceback.format_exc()}")
                         final_results['metadata']['visualization_error'] = str(viz_error)
                 else:
                     print("\n🎨 Phase 4: DTW visualizations skipped (disabled)")
+
+                # Remove frame data from final results to reduce file size
+                final_results['video1_data']['frames'] = []
+                final_results['video2_data']['frames'] = []
             else:
                 print("⚠️ Could not load normalized data for DTW analysis")
                 print("   📋 Falling back to existing analysis only")
@@ -369,7 +325,8 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
                 final_results['metadata']['dtw_analysis_included'] = False
                 final_results['metadata']['analysis_type'] = 'standard_fallback'
                 final_results['metadata']['dtw_error'] = 'Normalized data not available'
-                
+            
+        
         except Exception as e:
             print(f"❌ DTW analysis failed: {e}")
             print("   📋 Falling back to existing analysis")
@@ -612,28 +569,6 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
         print("=" * 60)
         print("✅ Analysis completed successfully!")
     
-    def _process_video_data(self, video_path: str, video_label: str) -> Optional[Dict]:
-        """Process video data by loading existing analysis results"""
-        try:
-            print(f"   📹 Loading {video_label}: {os.path.basename(video_path)}")
-            
-            # Try to find existing analysis results
-            base_name = self._get_base_name(video_path)
-            analysis_file = f"data/results/{base_name}_normalized_output.json"
-            
-            if os.path.exists(analysis_file):
-                with open(analysis_file, 'r') as f:
-                    video_data = json.load(f)
-                print(f"   ✅ Loaded existing analysis: {base_name}")
-                return video_data
-            else:
-                print(f"   ❌ No analysis found: {analysis_file}")
-                return None
-                
-        except Exception as e:
-            print(f"   ❌ Error loading {video_label}: {e}")
-            return None
-    
     def _get_base_name(self, video_path: str) -> str:
         """Get base name from video path"""
         return os.path.splitext(os.path.basename(video_path))[0]
@@ -674,7 +609,8 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
             "Standard": "data/video/Standard",
             "EdgeCase": "data/video/EdgeCase", 
             "Bakke": "data/video/Bakke",
-            "Test Clips": "data/video/test/clips"
+            "Test Clips": "data/video/test/clips",
+            "PlayerProfile": "data/video/PlayerProfile"
         }
         
         videos_by_folder = {}

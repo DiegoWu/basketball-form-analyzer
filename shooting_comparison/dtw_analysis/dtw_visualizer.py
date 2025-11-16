@@ -12,24 +12,17 @@ import numpy as np
 import os
 from typing import Dict, List, Tuple, Optional
 import json
+import shooting_comparison.utils.calculation_utils as calculation_utils
 
-# Try to import matplotlib
-try:
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-    from matplotlib.animation import FuncAnimation
-    MATPLOTLIB_AVAILABLE = True
-except ImportError:
-    MATPLOTLIB_AVAILABLE = False
-    print("⚠️ matplotlib not available, DTW visualizations will be disabled")
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.animation import FuncAnimation
+from dtaidistance import dtw, similarity
 
-# Try to import cv2
-try:
-    import cv2
-    CV2_AVAILABLE = True
-except ImportError:
-    CV2_AVAILABLE = False
-    print("⚠️ opencv-python not available, video processing features will be limited")
+MATPLOTLIB_AVAILABLE = True
+
+import cv2
+CV2_AVAILABLE = True
 
 class DTWVisualizer:
     """
@@ -47,201 +40,16 @@ class DTWVisualizer:
             'similarity_high': '#43AA8B',
             'similarity_low': '#F8333C'
         }
+        # data_path = "data/extracted_data/"
+        # self.normalized_data_path1 = data_path + os.path.basename(video1_path) if video1_path else None
+        # self.normalized_data_path2 = data_path + os.path.basename(video2_path) if video2_path else None
         self.matplotlib_available = MATPLOTLIB_AVAILABLE
-        
+         
         if not self.matplotlib_available:
             print("⚠️ DTWVisualizer: matplotlib not available, visualizations disabled")
         
-    def create_dtw_alignment_plot(self, dtw_results: Dict, feature_name: str, 
-                                save_path: str = None) -> str:
-        """
-        Create DTW alignment plot showing how frames are matched.
-        
-        Args:
-            dtw_results: DTW analysis results
-            feature_name: Name of feature to visualize
-            save_path: Path to save the plot
-            
-        Returns:
-            Path to saved plot
-        """
-        if not self.matplotlib_available:
-            print(f"⚠️ Cannot create DTW alignment plot: matplotlib not available")
-            return None
-            
-        print(f"🎨 Creating DTW alignment plot for {feature_name}...")
-        
-        # Extract DTW data for the specific feature
-        detailed_analysis = dtw_results.get('dtw_analysis', {}).get('detailed_analysis', {})
-        feature_data = detailed_analysis.get(feature_name, {})
-        
-        if 'error' in feature_data:
-            print(f"⚠️ Cannot create alignment plot: {feature_data['error']}")
-            return None
-            
-        # Create the alignment plot
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=self.fig_size)
-        fig.suptitle(f'DTW Alignment Analysis: {feature_name.replace("_", " ").title()}', 
-                    fontsize=16, fontweight='bold')
-        
-        # Plot 1: Original trajectories
-        self._plot_original_trajectories(ax1, feature_data, feature_name)
-        
-        # Plot 2: DTW alignment path
-        self._plot_dtw_warping_path(ax2, feature_data, feature_name)
-        
-        # Plot 3: Aligned trajectories
-        self._plot_aligned_trajectories(ax3, feature_data, feature_name)
-        
-        plt.tight_layout()
-        
-        # Save the plot
-        if not save_path:
-            save_path = f"shooting_comparison/results/dtw_alignment_{feature_name}.png"
-        
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"✅ DTW alignment plot saved: {save_path}")
-        return save_path
-    
-    def _plot_original_trajectories(self, ax, feature_data: Dict, feature_name: str):
-        """Plot original trajectories before DTW alignment"""
-        # This is a simplified version - would need actual trajectory data
-        # For now, create placeholder visualization
-        
-        ax.set_title("Original Trajectories (Before Alignment)")
-        ax.plot([1, 2, 3, 4, 5], [1, 4, 2, 5, 3], 
-               color=self.colors['video1'], linewidth=2, label='Video 1')
-        ax.plot([1, 2, 3, 4, 5, 6], [1.2, 3.8, 2.1, 4.9, 3.2, 2], 
-               color=self.colors['video2'], linewidth=2, label='Video 2')
-        
-        ax.set_xlabel("Frame Index")
-        ax.set_ylabel("Feature Value")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-    
-    def _plot_dtw_warping_path(self, ax, feature_data: Dict, feature_name: str):
-        """Plot DTW warping path showing frame alignments"""
-        ax.set_title("DTW Warping Path (Frame Alignments)")
-        
-        # Create sample warping path for demonstration
-        # In real implementation, would extract from DTW results
-        path_i = [0, 1, 2, 2, 3, 4]  # Video 1 frames
-        path_j = [0, 0, 1, 2, 3, 4]  # Video 2 frames
-        
-        # Plot warping path
-        ax.plot(path_j, path_i, color=self.colors['alignment'], linewidth=3, marker='o', markersize=6)
-        
-        # Add diagonal reference line
-        max_frame = max(max(path_i), max(path_j))
-        ax.plot([0, max_frame], [0, max_frame], 
-               color='gray', linestyle='--', alpha=0.5, label='Perfect Alignment')
-        
-        ax.set_xlabel("Video 2 Frame Index")
-        ax.set_ylabel("Video 1 Frame Index") 
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        
-        # Add annotations for key alignments
-        for i, (x, y) in enumerate(zip(path_j, path_i)):
-            if i % 2 == 0:  # Annotate every other point
-                ax.annotate(f'({x},{y})', (x, y), xytext=(5, 5), 
-                          textcoords='offset points', fontsize=8)
-    
-    def _plot_aligned_trajectories(self, ax, feature_data: Dict, feature_name: str):
-        """Plot trajectories after DTW alignment"""
-        ax.set_title("Aligned Trajectories (After DTW)")
-        
-        # Sample aligned data
-        aligned_frames = [1, 2, 3, 4, 5, 6]
-        traj1_aligned = [1, 4, 2, 2, 5, 3]  # Stretched/compressed to match
-        traj2_aligned = [1.2, 3.8, 2.1, 2.1, 4.9, 3.2]
-        
-        ax.plot(aligned_frames, traj1_aligned, 
-               color=self.colors['video1'], linewidth=2, label='Video 1 (Aligned)')
-        ax.plot(aligned_frames, traj2_aligned, 
-               color=self.colors['video2'], linewidth=2, label='Video 2 (Aligned)')
-        
-        # Fill area between trajectories to show similarity
-        ax.fill_between(aligned_frames, traj1_aligned, traj2_aligned, 
-                       alpha=0.3, color=self.colors['similarity_high'])
-        
-        ax.set_xlabel("Aligned Timeline")
-        ax.set_ylabel("Feature Value")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        
-        # Add similarity score annotation
-        similarity = feature_data.get('overall_similarity', 0)
-        ax.text(0.02, 0.98, f'Similarity: {similarity:.1f}%', 
-               transform=ax.transAxes, fontsize=12, fontweight='bold',
-               bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-    
-    def create_similarity_heatmap(self, dtw_results: Dict, save_path: str = None) -> str:
-        """
-        Create heatmap showing similarity scores across all features.
-        
-        Args:
-            dtw_results: DTW analysis results
-            save_path: Path to save the heatmap
-            
-        Returns:
-            Path to saved heatmap
-        """
-        print("🎨 Creating DTW similarity heatmap...")
-        
-        # Extract feature similarities
-        feature_similarities = dtw_results.get('dtw_analysis', {}).get('feature_similarities', {})
-        
-        if not feature_similarities:
-            print("⚠️ No feature similarities found for heatmap")
-            return None
-        
-        # Prepare data for heatmap
-        features = list(feature_similarities.keys())
-        feature_names = [name.replace('_', ' ').title() for name in features]
-        similarities = [feature_similarities[f] for f in features]
-        
-        # Create heatmap
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Create color matrix
-        similarity_matrix = np.array(similarities).reshape(1, -1)
-        
-        # Plot heatmap
-        im = ax.imshow(similarity_matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
-        
-        # Customize plot
-        ax.set_title('DTW Feature Similarity Scores', fontsize=16, fontweight='bold')
-        ax.set_xticks(range(len(feature_names)))
-        ax.set_xticklabels(feature_names, rotation=45, ha='right')
-        ax.set_yticks([])
-        
-        # Add text annotations
-        for i, similarity in enumerate(similarities):
-            ax.text(i, 0, f'{similarity:.1f}%', ha='center', va='center', 
-                   fontweight='bold', fontsize=12,
-                   color='white' if similarity < 50 else 'black')
-        
-        # Add colorbar
-        cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-        cbar.set_label('Similarity Score (%)', rotation=270, labelpad=20)
-        
-        plt.tight_layout()
-        
-        # Save the plot
-        if not save_path:
-            save_path = "shooting_comparison/results/dtw_similarity_heatmap.png"
-        
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"✅ DTW similarity heatmap saved: {save_path}")
-        return save_path
-    
+   
+   
     def create_trajectory_comparison_plot(self, dtw_results: Dict, video1_data: Dict, 
                                         video2_data: Dict, save_path: str = None) -> str:
         """
@@ -280,86 +88,563 @@ class DTWVisualizer:
         print(f"✅ DTW trajectory comparison plot saved: {save_path}")
         return save_path
     
+    def _apply_dtw_to_trajectories(self, data1: List[float], data2: List[float]) -> Tuple[float, List[Tuple[int, int]]]:
+        """
+        Apply DTW algorithm to align two 1D trajectories (for angles, hip positions).
+        
+        Args:
+            data1: First trajectory data (1D)
+            data2: Second trajectory data (1D)
+            
+        Returns:
+            Tuple of (dtw_distance, warping_path)
+        """
+        # Convert to numpy arrays
+        seq1 = np.array(data1, dtype=float)
+        seq2 = np.array(data2, dtype=float)
+        
+        # Calculate DTW distance and path
+        distance = dtw.distance(seq1, seq2)
+        normalized_distance = distance / max(len(seq1), len(seq2))
+        path = dtw.warping_path(seq1, seq2)
+        return normalized_distance, path
+
+    def _apply_dtw_to_trajectory_2d(self, x1: List[float], y1: List[float], 
+                                 x2: List[float], y2: List[float]) -> Tuple[float, List[Tuple[int, int]]]:
+        """
+        Apply DTW to 2D trajectory using manual implementation with Euclidean distance.
+        
+        Args:
+            x1, y1: First trajectory coordinates
+            x2, y2: Second trajectory coordinates
+            
+        Returns:
+            Tuple of (dtw_distance, warping_path)
+        """
+     
+        # Convert to numpy arrays and create 2D points
+        x1 = np.array(x1, dtype=float)
+        y1 = np.array(y1, dtype=float)
+        x2 = np.array(x2, dtype=float)
+        y2 = np.array(y2, dtype=float)
+        
+        points1 = np.column_stack((x1, y1))
+        points2 = np.column_stack((x2, y2))
+        
+        n1, n2 = len(points1), len(points2)
+        
+        # print(f"   [DEBUG] DTW 2D - Seq1 length: {n1}, Seq2 length: {n2}")
+        
+        # Initialize DTW cost matrix
+        dtw_matrix = np.full((n1 + 1, n2 + 1), np.inf)
+        dtw_matrix[0, 0] = 0
+        
+        # Fill DTW cost matrix with Euclidean distances
+        for i in range(1, n1 + 1):
+            for j in range(1, n2 + 1):
+                # Calculate Euclidean distance between 2D points
+                cost = np.sqrt((points1[i-1][0] - points2[j-1][0])**2 + 
+                            (points1[i-1][1] - points2[j-1][1])**2)
+                
+                # DTW recurrence relation
+                dtw_matrix[i, j] = cost + min(
+                    dtw_matrix[i-1, j],      # insertion
+                    dtw_matrix[i, j-1],      # deletion
+                    dtw_matrix[i-1, j-1]     # match
+                )
+        
+        # Final DTW distance
+        distance = dtw_matrix[n1, n2]
+        normalized_distance = distance / max(n1, n2)
+        # Backtrack to find optimal warping path
+        path = []
+        i, j = n1, n2
+        
+        while i > 0 and j > 0:
+            path.append((i-1, j-1))
+            
+            # Find which direction we came from (minimum cost)
+            candidates = [
+                (dtw_matrix[i-1, j-1], i-1, j-1),  # diagonal (match)
+                (dtw_matrix[i-1, j], i-1, j),      # up (insertion)
+                (dtw_matrix[i, j-1], i, j-1)       # left (deletion)
+            ]
+            
+            _, i, j = min(candidates, key=lambda x: x[0])
+        
+        # Reverse path to get forward direction
+        path.reverse()
+        
+        # print(f"   [DEBUG] DTW 2D - Distance: {distance:.4f}, Path length: {len(path)}")
+        
+        return normalized_distance, path
+
+    def _calculate_simple_distance(self, data1: List[float], data2: List[float]) -> float:
+        """Calculate simple distance for 1D data when DTW is not available"""
+        min_len = min(len(data1), len(data2))
+        return np.sqrt(np.mean((np.array(data1[:min_len]) - np.array(data2[:min_len]))**2))
+
+    def _calculate_simple_distance_2d(self, x1: List[float], y1: List[float],
+                                    x2: List[float], y2: List[float]) -> float:
+        """Calculate simple euclidean distance for 2D trajectories"""
+        min_len = min(len(x1), len(x2))
+        dx = np.array(x1[:min_len]) - np.array(x2[:min_len])
+        dy = np.array(y1[:min_len]) - np.array(y2[:min_len])
+        return np.sqrt(np.mean(dx**2 + dy**2))
+
     def _plot_ball_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot ball trajectory comparison"""
-        ax.set_title("Ball Trajectory Comparison")
+        """Plot ball trajectory comparison with DTW alignment (2D data)"""
+        ax.set_title("Ball Trajectory Comparison (DTW Aligned)")
         
-        # Placeholder trajectory data
-        frames = range(1, 21)
-        ball1_x = [i + np.sin(i/3) * 2 for i in frames]
-        ball1_y = [i * 0.5 + np.cos(i/2) for i in frames]
-        ball2_x = [i + np.sin(i/3 + 0.5) * 1.8 for i in frames]
-        ball2_y = [i * 0.52 + np.cos(i/2 + 0.3) for i in frames]
+        # Extract actual ball trajectory data
+        ball1_trajectory = self._extract_ball_trajectory(video1_data)
+        ball2_trajectory = self._extract_ball_trajectory(video2_data)
         
-        ax.plot(ball1_x, ball1_y, color=self.colors['video1'], linewidth=2, 
-               marker='o', markersize=4, label='Video 1 Ball')
-        ax.plot(ball2_x, ball2_y, color=self.colors['video2'], linewidth=2, 
-               marker='s', markersize=4, label='Video 2 Ball')
+        if ball1_trajectory and ball2_trajectory:
+            ball1_x, ball1_y = ball1_trajectory
+            ball2_x, ball2_y = ball2_trajectory
+            
+            # Apply DTW to 2D trajectory (uses same path for both x and y)
+            distance, path = self._apply_dtw_to_trajectory_2d(ball1_x, ball1_y, ball2_x, ball2_y)
+            
+            # Plot original trajectories with dashed lines
+            # ax.plot(ball1_x, ball1_y, color=self.colors['video1'], linewidth=1.5, 
+            #     marker='o', markersize=3, label='Video 1 Ball', alpha=0.5, linestyle='--')
+            # ax.plot(ball2_x, ball2_y, color=self.colors['video2'], linewidth=1.5, 
+            #     marker='s', markersize=3, label='Video 2 Ball', alpha=0.5, linestyle='--')
+            
+            # Create aligned trajectories using DTW path
+            if path:
+                aligned_ball1_x = [ball1_x[i] for i, j in path]
+                aligned_ball1_y = [ball1_y[i] for i, j in path]
+                aligned_ball2_x = [ball2_x[j] for i, j in path]
+                aligned_ball2_y = [ball2_y[j] for i, j in path]
+                
+                # Plot aligned trajectories with solid lines
+                ax.plot(aligned_ball1_x, aligned_ball1_y, color=self.colors['video1'], 
+                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+                ax.plot(aligned_ball2_x, aligned_ball2_y, color=self.colors['video2'], 
+                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+                
+                # Draw alignment connections (sample every N points)
+                step = max(1, len(path) // 10)
+                for i in range(0, len(path), step):
+                    idx1, idx2 = path[i]
+                    ax.plot([ball1_x[idx1], ball2_x[idx2]], [ball1_y[idx1], ball2_y[idx2]], 
+                        color=self.colors['alignment'], alpha=0.3, linewidth=1, linestyle=':')
+            
+            # Mark start points
+            ax.scatter(ball1_x[0], ball1_y[0], color=self.colors['video1'], 
+                    s=150, marker='o', edgecolors='black', linewidths=2, zorder=5)
+            ax.scatter(ball2_x[0], ball2_y[0], color=self.colors['video2'], 
+                    s=150, marker='s', edgecolors='black', linewidths=2, zorder=5)
+            
+            # # Add DTW similarity
+            # similarity = max(0, 100 - distance * 10)
+            # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.3f}', 
+            #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
+            #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        else:
+            print("   ⚠️ Ball trajectory data not available, skipping ball plot")
+            ax.text(0.5, 0.5, 'Ball trajectory data not available', 
+                transform=ax.transAxes, ha='center', va='center', fontsize=12)
         
         ax.set_xlabel("X Position (normalized)")
         ax.set_ylabel("Y Position (normalized)")
-        ax.legend()
+        ax.legend(loc='best', fontsize=8)
         ax.grid(True, alpha=0.3)
-    
+        ax.invert_yaxis()
+
     def _plot_wrist_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot wrist trajectory comparison"""
-        ax.set_title("Wrist Trajectory Comparison") 
+        """Plot wrist trajectory comparison with DTW alignment (2D data)"""
+        ax.set_title("Wrist Trajectory Comparison (DTW Aligned)")
         
-        # Placeholder wrist data
-        frames = range(1, 21)
-        wrist1_x = [i + np.cos(i/4) * 1.5 for i in frames]
-        wrist1_y = [15 - i * 0.3 + np.sin(i/3) for i in frames]
-        wrist2_x = [i + np.cos(i/4 + 0.2) * 1.4 for i in frames]
-        wrist2_y = [15.2 - i * 0.32 + np.sin(i/3 + 0.1) for i in frames]
+        # Extract actual wrist trajectory data
+        wrist1_trajectory = self._extract_wrist_trajectory(video1_data)
+        wrist2_trajectory = self._extract_wrist_trajectory(video2_data)
         
-        ax.plot(wrist1_x, wrist1_y, color=self.colors['video1'], linewidth=2, 
-               marker='o', markersize=4, label='Video 1 Wrist')
-        ax.plot(wrist2_x, wrist2_y, color=self.colors['video2'], linewidth=2, 
-               marker='s', markersize=4, label='Video 2 Wrist')
+        if wrist1_trajectory and wrist2_trajectory:
+            wrist1_x, wrist1_y = wrist1_trajectory
+            wrist2_x, wrist2_y = wrist2_trajectory
+            
+            # Apply DTW to 2D trajectory
+            distance, path = self._apply_dtw_to_trajectory_2d(wrist1_x, wrist1_y, wrist2_x, wrist2_y)
+            
+            # Plot original trajectories
+            # ax.plot(wrist1_x, wrist1_y, color=self.colors['video1'], linewidth=1.5, 
+            #     marker='o', markersize=3, label='Video 1 Wrist', alpha=0.5, linestyle='--')
+            # ax.plot(wrist2_x, wrist2_y, color=self.colors['video2'], linewidth=1.5, 
+            #     marker='s', markersize=3, label='Video 2 Wrist', alpha=0.5, linestyle='--')
+            
+            # Create aligned trajectories
+            if path:
+                aligned_wrist1_x = [wrist1_x[i] for i, j in path]
+                aligned_wrist1_y = [wrist1_y[i] for i, j in path]
+                aligned_wrist2_x = [wrist2_x[j] for i, j in path]
+                aligned_wrist2_y = [wrist2_y[j] for i, j in path]
+                
+                # Plot aligned trajectories
+                ax.plot(aligned_wrist1_x, aligned_wrist1_y, color=self.colors['video1'], 
+                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+                ax.plot(aligned_wrist2_x, aligned_wrist2_y, color=self.colors['video2'], 
+                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+                
+                # Draw alignment connections
+                step = max(1, len(path) // 10)
+                for i in range(0, len(path), step):
+                    idx1, idx2 = path[i]
+                    ax.plot([wrist1_x[idx1], wrist2_x[idx2]], [wrist1_y[idx1], wrist2_y[idx2]], 
+                        color=self.colors['alignment'], alpha=0.3, linewidth=1, linestyle=':')
+            
+            # Mark start points
+            ax.scatter(wrist1_x[0], wrist1_y[0], color=self.colors['video1'], 
+                    s=150, marker='o', edgecolors='black', linewidths=2, zorder=5)
+            ax.scatter(wrist2_x[0], wrist2_y[0], color=self.colors['video2'], 
+                    s=150, marker='s', edgecolors='black', linewidths=2, zorder=5)
+            
+            # Add DTW similarity
+            # print("[DEBUG: DISTANCE]: ", distance)
+            # similarity = max(0, 100 - distance * 10)
+            # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.3f}', 
+            #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
+            #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        else:
+            print("   ⚠️ Wrist trajectory data not available, skipping wrist plot")
+            ax.text(0.5, 0.5, 'Wrist trajectory data not available', 
+                transform=ax.transAxes, ha='center', va='center', fontsize=12)
         
         ax.set_xlabel("X Position (normalized)")
         ax.set_ylabel("Y Position (normalized)")
-        ax.legend()
+        ax.legend(loc='best', fontsize=8)
         ax.grid(True, alpha=0.3)
-    
+        ax.invert_yaxis()
+
     def _plot_elbow_angle_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot elbow angle comparison"""
-        ax.set_title("Elbow Angle Comparison")
+        """Plot elbow angle comparison with DTW alignment (1D data)"""
+        ax.set_title("Elbow Angle Comparison (DTW Aligned)")
         
-        # Placeholder elbow angle data
-        frames = range(1, 21)
-        elbow1 = [90 + 30 * np.sin(i/5) for i in frames]
-        elbow2 = [92 + 28 * np.sin(i/5 + 0.3) for i in frames]
+        # Extract actual elbow angle data
+
+        elbow1_angles = self._extract_elbow_angles(video1_data)
+        elbow2_angles = self._extract_elbow_angles(video2_data)
         
-        ax.plot(frames, elbow1, color=self.colors['video1'], linewidth=2, 
-               marker='o', markersize=4, label='Video 1 Elbow')
-        ax.plot(frames, elbow2, color=self.colors['video2'], linewidth=2, 
-               marker='s', markersize=4, label='Video 2 Elbow')
-        
-        ax.set_xlabel("Frame")
+        if elbow1_angles and elbow2_angles:
+            # Apply DTW to 1D angle sequences
+            distance, path = self._apply_dtw_to_trajectories(elbow1_angles, elbow2_angles)
+            
+            frames1 = range(len(elbow1_angles))
+            frames2 = range(len(elbow2_angles))
+            
+            # Create aligned sequences using DTW path
+            if path:
+                aligned_elbow1 = [elbow1_angles[i] for i, j in path]
+                aligned_elbow2 = [elbow2_angles[j] for i, j in path]
+                aligned_frames = range(len(aligned_elbow1))
+                
+                # Plot aligned angles with solid lines
+                ax.plot(aligned_frames, aligned_elbow1, color=self.colors['video1'], 
+                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+                ax.plot(aligned_frames, aligned_elbow2, color=self.colors['video2'], 
+                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+                
+                # Fill area between aligned curves
+                ax.fill_between(aligned_frames, aligned_elbow1, aligned_elbow2, 
+                            alpha=0.2, color=self.colors['alignment'])
+            
+            # Add reference lines
+            ax.axhline(y=90, color='gray', linestyle='--', alpha=0.4, linewidth=1, label='90° Ref')
+            ax.axhline(y=120, color='gray', linestyle=':', alpha=0.4, linewidth=1, label='120° Ref')
+            
+            # Add DTW similarity
+            # similarity = max(0, 100 - distance * 0.5)
+            # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.2f}°', 
+            #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
+            #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        else:
+            print("   ⚠️ Elbow angle data not available, skipping elbow plot")
+            ax.text(0.5, 0.5, 'Elbow angle data not available', 
+                transform=ax.transAxes, ha='center', va='center', fontsize=12)
+
+        ax.set_xlabel("Frame (DTW Aligned)")
         ax.set_ylabel("Elbow Angle (degrees)")
-        ax.legend()
+        ax.set_ylim(0, 180)
+        ax.legend(loc='best', fontsize=8)
         ax.grid(True, alpha=0.3)
-    
+
     def _plot_hip_stability_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot hip stability comparison"""
-        ax.set_title("Hip Stability Comparison")
+        """Plot hip stability comparison with DTW alignment (1D data)"""
+        ax.set_title("Hip Stability Comparison (DTW Aligned)")
         
-        # Placeholder hip stability data
-        frames = range(1, 21)
-        hip1 = [10 + np.random.normal(0, 0.5) for _ in frames]
-        hip2 = [10.2 + np.random.normal(0, 0.6) for _ in frames]
+        # Extract actual hip position data (1D - Y positions only)
+        hip1_positions = self._extract_hip_positions(video1_data)
+        hip2_positions = self._extract_hip_positions(video2_data)
         
-        ax.plot(frames, hip1, color=self.colors['video1'], linewidth=2, 
-               marker='o', markersize=4, label='Video 1 Hip')
-        ax.plot(frames, hip2, color=self.colors['video2'], linewidth=2, 
-               marker='s', markersize=4, label='Video 2 Hip')
-        
-        ax.set_xlabel("Frame")
-        ax.set_ylabel("Hip Y Position (normalized)")
-        ax.legend()
+        if hip1_positions and hip2_positions:
+            # Apply DTW to 1D hip position sequences
+            distance, path = self._apply_dtw_to_trajectories(hip1_positions, hip2_positions)
+            
+            frames1 = range(len(hip1_positions))
+            frames2 = range(len(hip2_positions))
+
+            # Create aligned sequences using DTW path
+            if path:
+                aligned_hip1 = [hip1_positions[i] for i, j in path]
+                aligned_hip2 = [hip2_positions[j] for i, j in path]
+                aligned_frames = range(len(aligned_hip1))
+                
+                # Plot aligned positions with solid lines
+                ax.plot(aligned_frames, aligned_hip1, color=self.colors['video1'], 
+                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+                ax.plot(aligned_frames, aligned_hip2, color=self.colors['video2'], 
+                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+                
+                # Fill area between curves
+                ax.fill_between(aligned_frames, aligned_hip1, aligned_hip2, 
+                            alpha=0.2, color=self.colors['alignment'])
+
+            # Calculate stability metrics
+            hip1_std = np.std(hip1_positions)
+            hip2_std = np.std(hip2_positions)
+            similarity = max(0, 100 - distance * 50)
+            
+            # Determine which is more stable
+            more_stable = "User" if hip1_std < hip2_std else "Player"
+
+            stability_text = (
+                # f'DTW Similarity: {similarity:.1f}%\n'
+                f'User Stability (σ): {hip1_std:.4f}\n'
+                f'Player Stability (σ): {hip2_std:.4f}\n'
+                f'More Stable: {more_stable}'
+            )
+            
+            ax.text(0.02, 0.98, stability_text, 
+                transform=ax.transAxes, fontsize=9, verticalalignment='top',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            
+            # Add average position lines
+            ax.axhline(y=np.mean(hip1_positions), color=self.colors['video1'], 
+                    linestyle=':', alpha=0.3, linewidth=1.5)
+            ax.axhline(y=np.mean(hip2_positions), color=self.colors['video2'], 
+                    linestyle=':', alpha=0.3, linewidth=1.5)
+        else:
+            print("   ⚠️ Hip position data not available, skipping hip plot")
+            ax.text(0.5, 0.5, 'Hip position data not available', 
+                transform=ax.transAxes, ha='center', va='center', fontsize=12)
+
+        ax.set_xlabel("Frame (DTW Aligned)")
+        ax.set_ylabel("Hip Position (normalized)")
+        ax.legend(loc='best', fontsize=8)
         ax.grid(True, alpha=0.3)
-    
+        ax.invert_yaxis()
+
+    def _interpolate_missing_values(self, data: List[float]) -> List[float]:
+        """
+        Apply linear interpolation to fill missing values (-10) in data.
+        
+        Args:
+            data: List of values with -10 representing missing data
+            
+        Returns:
+            List with interpolated values
+        """
+        if not data:
+            return data
+        
+        data = np.array(data, dtype=float)
+        
+        # Find indices of valid (non -10) and missing (-10) values
+        valid_indices = np.where(data != -10)[0]
+        missing_indices = np.where(data == -10)[0]
+        
+        # If no missing values, return original data
+        if len(missing_indices) == 0:
+            return data.tolist()
+        
+        # If no valid values, cannot interpolate
+        if len(valid_indices) == 0:
+            print("   ⚠️ No valid values for interpolation")
+            return data.tolist()
+        
+        # Interpolate missing values
+        if len(valid_indices) > 1:
+            # Linear interpolation for missing values
+            data[missing_indices] = np.interp(missing_indices, valid_indices, data[valid_indices])
+        else:
+            # Only one valid value - use it to fill all missing values
+            data[missing_indices] = data[valid_indices[0]]
+        
+        return data.tolist()
+
+    def _extract_ball_trajectory(self, video_data: Dict) -> Optional[Tuple[List[float], List[float]]]:
+        """Extract ball trajectory from video data with interpolation"""
+        try:
+            frames = video_data.get('frames', [])
+            if not frames:
+                return None
+            
+            ball_x = []
+            ball_y = []
+            # print("[DEBUG] Extracting ball trajectory from video data...")
+            
+            for frame in frames:
+                ball_data = frame.get('normalized_ball', {})
+                center_x = ball_data.get('center_x', -10)
+                center_y = ball_data.get('center_y', -10)
+                ball_x.append(center_x)
+                ball_y.append(center_y)
+            
+            if len(ball_x) == 0:
+                return None
+            
+            # Apply interpolation to fill missing values
+            ball_x = self._interpolate_missing_values(ball_x)
+            ball_y = self._interpolate_missing_values(ball_y)
+            
+            # Check if we still have valid data after interpolation
+            if all(x == -10 for x in ball_x) or all(y == -10 for y in ball_y):
+                print("   ⚠️ No valid ball trajectory data after interpolation")
+                return None
+            
+            return (ball_x, ball_y)
+            
+        except Exception as e:
+            print(f"   ⚠️ Error extracting ball trajectory: {e}")
+            return None
+
+    def _extract_wrist_trajectory(self, video_data: Dict) -> Optional[Tuple[List[float], List[float]]]:
+        """Extract wrist trajectory from video data with interpolation"""
+        try:
+            frames = video_data.get('frames', [])
+            metadata = video_data.get('metadata', {})
+            selected_hand = metadata.get('hand', 'right')
+            
+            if not frames:
+                return None
+            
+            wrist_x = []
+            wrist_y = []
+
+            for frame in frames:
+                normalized_pose = frame.get('normalized_pose', {})
+                wrist_key = f'{selected_hand}_wrist'
+                
+                if normalized_pose and wrist_key in normalized_pose:
+                    wrist_x.append(normalized_pose[wrist_key].get('x', -10))
+                    wrist_y.append(normalized_pose[wrist_key].get('y', -10))
+                else:
+                    wrist_x.append(-10)
+                    wrist_y.append(-10)
+
+            if len(wrist_x) == 0:
+                return None
+            
+            # Apply interpolation to fill missing values
+            wrist_x = self._interpolate_missing_values(wrist_x)
+            wrist_y = self._interpolate_missing_values(wrist_y)
+            
+            # Check if we still have valid data after interpolation
+            if all(x == -10 for x in wrist_x) or all(y == -10 for y in wrist_y):
+                print("   ⚠️ No valid wrist trajectory data after interpolation")
+                return None
+            
+            return (wrist_x, wrist_y)
+            
+        except Exception as e:
+            print(f"   ⚠️ Error extracting wrist trajectory: {e}")
+            return None
+
+    def _extract_elbow_angles(self, video_data: Dict) -> Optional[List[float]]:
+        """Extract elbow angles from video data with interpolation"""
+        try:
+            frames = video_data.get('frames', [])
+            metadata = video_data.get('metadata', {})
+            selected_hand = metadata.get('hand', 'right')
+            
+            if not frames:
+                return None
+            
+            elbow_angles = []
+
+            for frame in frames:
+                normalized_pose = frame.get('normalized_pose', {})
+                required_keys = [
+                    f'{selected_hand}_shoulder',
+                    f'{selected_hand}_elbow',
+                    f'{selected_hand}_wrist'
+                ]
+                
+                if normalized_pose and all(key in normalized_pose for key in required_keys):
+                
+                    elbow_angle = calculation_utils.calculate_angle(
+                        normalized_pose[f'{selected_hand}_shoulder']['x'],
+                        normalized_pose[f'{selected_hand}_shoulder']['y'],
+                        normalized_pose[f'{selected_hand}_elbow']['x'],
+                        normalized_pose[f'{selected_hand}_elbow']['y'],
+                        normalized_pose[f'{selected_hand}_wrist']['x'],
+                        normalized_pose[f'{selected_hand}_wrist']['y']
+                    )
+                    elbow_angles.append(elbow_angle)
+
+                else:
+                    elbow_angles.append(-10)
+
+            if len(elbow_angles) == 0:
+                return None
+            
+            # Apply interpolation to fill missing values
+            elbow_angles = self._interpolate_missing_values(elbow_angles)
+            
+            # Check if we still have valid data after interpolation
+            if all(angle == -10 for angle in elbow_angles):
+                print("   ⚠️ No valid elbow angle data after interpolation")
+                return None
+            
+            return elbow_angles
+            
+        except Exception as e:
+            print(f"   ⚠️ Error extracting elbow angles: {e}")
+            return None
+
+    def _extract_hip_positions(self, video_data: Dict) -> Optional[List[float]]:
+        """Extract hip Y positions from video data with interpolation"""
+        try:
+            frames = video_data.get('frames', [])
+            if not frames:
+                return None
+            
+            hip_positions_y = []
+            
+            for frame in frames:
+                normalized_pose = frame.get('normalized_pose', {})
+                if normalized_pose and 'left_hip' in normalized_pose and 'right_hip' in normalized_pose:
+                    left_hip_y = normalized_pose['left_hip'].get('y', -10)
+                    right_hip_y = normalized_pose['right_hip'].get('y', -10)
+                    
+                    # Only average if both values are valid
+                    if left_hip_y != -10 and right_hip_y != -10:
+                        hip_positions_y.append((left_hip_y + right_hip_y) / 2)
+                    else:
+                        hip_positions_y.append(-10)
+                else:
+                    hip_positions_y.append(-10)
+            
+            if len(hip_positions_y) == 0:
+                return None
+            
+            # Apply interpolation to fill missing values
+            hip_positions_y = self._interpolate_missing_values(hip_positions_y)
+            
+            # Check if we still have valid data after interpolation
+            if all(pos == -10 for pos in hip_positions_y):
+                print("   ⚠️ No valid hip position data after interpolation")
+                return None
+            
+            return hip_positions_y
+
+        except Exception as e:
+            print(f"   ⚠️ Error extracting hip positions: {e}")
+            return None
+            
     def create_comprehensive_dtw_report(self, dtw_results: Dict, video1_data: Dict, 
                                       video2_data: Dict, video1_path: str, video2_path: str,
                                       save_dir: str = None) -> Dict[str, str]:
@@ -387,23 +672,11 @@ class DTWVisualizer:
         os.makedirs(save_dir, exist_ok=True)
         
         visualization_files = {}
-        
-        # 1. Similarity heatmap
-        heatmap_path = os.path.join(save_dir, "similarity_heatmap.png")
-        visualization_files['heatmap'] = self.create_similarity_heatmap(dtw_results, heatmap_path)
-        
-        # 2. Trajectory comparison
+    
+        # Trajectory comparison
         trajectory_path = os.path.join(save_dir, "trajectory_comparison.png")
         visualization_files['trajectories'] = self.create_trajectory_comparison_plot(
             dtw_results, video1_data, video2_data, trajectory_path)
-        
-        # 3. Feature-specific alignment plots
-        feature_similarities = dtw_results.get('dtw_analysis', {}).get('feature_similarities', {})
-        for feature_name in feature_similarities.keys():
-            alignment_path = os.path.join(save_dir, f"alignment_{feature_name}.png")
-            viz_path = self.create_dtw_alignment_plot(dtw_results, feature_name, alignment_path)
-            if viz_path:
-                visualization_files[f'alignment_{feature_name}'] = viz_path
         
         print(f"✅ DTW visualization report created in: {save_dir}")
         print(f"📊 Generated {len(visualization_files)} visualization files")
