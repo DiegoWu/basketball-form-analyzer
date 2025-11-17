@@ -5,14 +5,13 @@ Integrated pipeline for extraction, normalization, and visualization from video
 
 import os
 import glob
-import json
-import numpy as np
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Optional
 import cv2 # Added for FPS extraction
 import traceback
-import threading
-import concurrent.futures
+# import threading
+# import concurrent.futures
+import shutil
 
 # Import existing analysis pipeline
 from basketball_shooting_analyzer import BasketballShootingAnalyzer
@@ -143,47 +142,6 @@ class BasketballShootingIntegratedPipeline:
         print(f"✅ Ball extraction completed: {os.path.basename(ball_file)}")
         return ball_file
     
-    # def _extract_original_data(self, video_path: str, overwrite_mode: bool = False, use_existing_extraction: bool = True) -> bool:
-    #     """Extract original data with coordinate transformation (pose + ball)"""
-    #     base_name = os.path.splitext(os.path.basename(video_path))[0] 
-        
-    #     pose_original_file = os.path.join(self.extracted_data_dir, f"{base_name}_pose_original.json")
-    #     ball_original_file = os.path.join(self.extracted_data_dir, f"{base_name}_ball_original.json")
-        
-    #     if use_existing_extraction and (os.path.exists(pose_original_file) or os.path.exists(ball_original_file)):
-    #         print(f"⚠️ Using existing extraction data:")
-    #         if os.path.exists(pose_original_file):
-    #             print(f"  - Pose data: {os.path.basename(pose_original_file)}")
-    #         if os.path.exists(ball_original_file):
-    #             print(f"  - Ball data: {os.path.basename(ball_original_file)}")
-    #         return True
-        
-    #     # If overwrite_mode is True, always extract new data
-    #     if not use_existing_extraction and not overwrite_mode and (os.path.exists(pose_original_file) or os.path.exists(ball_original_file)):
-    #         choice = input("Overwrite and extract new data? (y/n): ").strip().lower()
-    #         if choice != 'y':
-    #             print("Using existing data.")
-    #             return True
-        
-    #     try:
-    #             # Use ThreadPoolExecutor for parallel execution
-    #         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-    #             # Submit both extraction tasks
-    #             pose_future = executor.submit(self._extract_pose, video_path)
-    #             ball_future = executor.submit(self._extract_ball, video_path)
-                
-    #             # Wait for both to complete and get results
-    #             pose_file = pose_future.result()
-    #             ball_file = ball_future.result()
-                
-    #             print("🔄 Both pose and ball extraction completed in parallel")
-            
-    #         return True
-    
-    #     except Exception as e:
-    #         print(f"❌ Failed to extract data: {e}")
-    #         return False
-
     def _extract_original_data(self, video_path: str, overwrite_mode: bool = False, use_existing_extraction: bool = True) -> bool:
         """Extract original data sequentially for Cloud Run stability"""
         base_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -217,12 +175,10 @@ class BasketballShootingIntegratedPipeline:
 
         except Exception as e:
             print(f"❌ Failed to extract data: {e}")
-            import traceback
             traceback.print_exc()
             return False
 
     def get_folder_name_from_path(self, video_path: str) -> str:
-        """비디오 경로에서 폴더 이름을 추출합니다."""
         # Extract folder name from video_path
         # Example: data/video/Standard/video1.mp4 -> Standard
         # Example: data/video/test/clips/video1.mov -> test
@@ -272,7 +228,6 @@ class BasketballShootingIntegratedPipeline:
                 # Move file to correct location with FPS in filename
                 old_output_path = os.path.join("data", "visualized_video", f"{base_name}_analyzed.avi")
                 if os.path.exists(old_output_path):
-                    import shutil
                     shutil.move(old_output_path, output_path)
                     print(f"✅ Visualization video generated: {os.path.basename(output_path)}")
                     print(f"📁 Saved to: {output_path}")
@@ -297,7 +252,6 @@ class BasketballShootingIntegratedPipeline:
         # Get available videos from analyzer
         self.available_videos = self.analyzer.list_available_videos()
         
-        # 실제 디렉토리에 있는 파일들만 정확히 카운트
         standard_videos = []
         edgecase_videos = []
         bakke_videos = []

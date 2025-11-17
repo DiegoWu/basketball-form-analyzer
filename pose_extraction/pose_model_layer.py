@@ -7,12 +7,8 @@ Use MoveNet model to extract pose keypoints from video
 import cv2
 import numpy as np
 import tensorflow as tf
-import tensorflow_hub as hub
 from typing import Dict, List, Tuple
-from matplotlib import pyplot as plt
-from matplotlib.collections import LineCollection
-import matplotlib.patches as patches
-   
+
 class PoseModelLayer:
 
     def __init__(self, model_name="lightning"):

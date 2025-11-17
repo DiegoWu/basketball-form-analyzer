@@ -6,7 +6,7 @@ Extracts only original absolute coordinates and saves as JSON
 
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # Import layer modules
 from .pose_model_layer import PoseModelLayer

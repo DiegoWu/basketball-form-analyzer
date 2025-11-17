@@ -7,9 +7,10 @@ Overlay the trajectory of a basketball detected by YOLOv8 on a video
 import cv2
 import numpy as np
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 from ultralytics import YOLO
+import traceback
 
 class BallTrajectoryVisualizer:
     def __init__(self, model_path: str = "ball_extraction/models/yolov8n736-customContinue.pt"):
@@ -285,7 +286,6 @@ def main():
         
     except Exception as e:
         print(f"❌ Error occurred during visualization: {e}")
-        import traceback
         traceback.print_exc()
 
 if __name__ == "__main__":

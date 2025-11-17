@@ -29,6 +29,7 @@ class HybridFPSPhaseDetector(BasePhaseDetector):
         "ball_cancel_absolute": 0,#0.025, # 2% of torso length for ball rising cancellation absolute movement
         "rising_to_loading_rising": 0.019, # safe threshold. 0.013 for detect noise
     }
+
     def __init__(self, min_phase_duration: int = 1, noise_threshold: int = 4, shot_detector=None):
         """
         Initialize the hybrid FPS phase detector.
@@ -339,7 +340,7 @@ class HybridFPSPhaseDetector(BasePhaseDetector):
             self.set_fps(kwargs['fps'])
         
         # Get selected hand (default to left if not provided)
-        selected_hand = kwargs.get('selected_hand', 'left')
+        selected_hand = kwargs.get('hand', 'right')
         
         # Get current frame data
         pose = self.get_pose_info(frame_idx, pose_data)

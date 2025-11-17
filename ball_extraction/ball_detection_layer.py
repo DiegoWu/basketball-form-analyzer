@@ -7,8 +7,7 @@ Detects and tracks basketballs in video using YOLOv8
 import cv2
 import numpy as np
 from ultralytics import YOLO
-from typing import Dict, List, Tuple, Optional
-import torch
+from typing import Dict, List, Tuple
 
 class BallDetectionLayer:
     def __init__(self, model_path: str = "ball_extraction/models/yolov8n736-customContinue.pt"):

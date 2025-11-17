@@ -6,8 +6,7 @@ Extracts only original absolute coordinates and saves as JSON
 
 import os
 import sys
-import cv2
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # Import layer modules
 from .ball_detection_layer import BallDetectionLayer

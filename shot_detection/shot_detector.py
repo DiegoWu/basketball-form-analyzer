@@ -6,7 +6,7 @@ Manages shot start/end/cancel transitions and provides shot-specific torso measu
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 
 class ShotDetector:

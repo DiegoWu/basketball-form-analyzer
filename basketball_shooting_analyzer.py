@@ -4,7 +4,6 @@ Basketball shooting motion analysis pipeline
 Integrate pose data and ball data to analyze shooting movements and visualize
 """
 
-from re import T
 import cv2
 import numpy as np
 import json
@@ -12,9 +11,7 @@ import os
 import glob
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
-import math
-import matplotlib.pyplot as plt
-from pathlib import Path
+from collections import Counter
 
 # Import phase detection modules
 from phase_detection.ball_based_phase_detector import BallBasedPhaseDetector
@@ -704,7 +701,7 @@ class BasketballShootingAnalyzer:
         
         # Get the frame index where first meaningful transition occurred
         first_transition_frame = getattr(self.phase_detector, 'first_transition_frame', None)
-        print(f"   🔍 DEBUG: phase_detector.first_transition_frame = {first_transition_frame}") 
+        # print(f"   🔍 DEBUG: phase_detector.first_transition_frame = {first_transition_frame}") 
         
         if first_transition_frame is None:
             print("   ⚠️ No phase transition detected, using first 4 frames")
@@ -833,7 +830,6 @@ class BasketballShootingAnalyzer:
         
         # Determine final direction
         if direction_votes:
-            from collections import Counter
             direction_count = Counter(direction_votes)
             facing_direction = direction_count.most_common(1)[0][0]
             
@@ -905,7 +901,6 @@ class BasketballShootingAnalyzer:
         
         # Determine final direction
         if direction_votes:
-            from collections import Counter
             direction_count = Counter(direction_votes)
             facing_direction = direction_count.most_common(1)[0][0]
             
@@ -1156,7 +1151,6 @@ class BasketballShootingAnalyzer:
         
         # Determine final direction
         if direction_votes:
-            from collections import Counter
             direction_count = Counter(direction_votes)
             facing_direction = direction_count.most_common(1)[0][0]
             reference_hip_side = 'right' if facing_direction == 'right' else 'left'
@@ -1973,7 +1967,7 @@ class BasketballShootingAnalyzer:
                 
                 # Copy original frame
                 original_frame = frame.copy()
-                normalized_frame = frame.copy()
+                normalized_frame = np.zeros_like(frame)
                 
                 # Left: Original absolute coordinates data
                 if frame_count < len(original_pose_data):
@@ -1997,8 +1991,6 @@ class BasketballShootingAnalyzer:
                 
                 # Add selected hand label to normalized frame
                 normalized_frame = self._draw_selected_hand_label(normalized_frame, self.selected_hand, self.selected_hand_confidence, frame_count)
-                
-
                 
                 # Stack two frames side by side
                 combined_frame = np.hstack([original_frame, normalized_frame])
@@ -2754,7 +2746,6 @@ class BasketballShootingAnalyzer:
 
     def _calculate_angle(self, ax, ay, bx, by, cx, cy):
         """Return angle between three points (ax,ay)-(bx,by)-(cx,cy) in degrees"""
-        import numpy as np
         
         # Vector AB
         ab_x = ax - bx
@@ -3532,7 +3523,6 @@ class BasketballShootingAnalyzer:
         
         # Determine final direction
         if len(direction_votes) >= 10:  # At least 10 frames required
-            from collections import Counter
             direction_count = Counter(direction_votes)
             facing_direction = direction_count.most_common(1)[0][0]
             
@@ -3605,7 +3595,6 @@ class BasketballShootingAnalyzer:
         
         # Determine final direction
         if direction_votes:
-            from collections import Counter
             direction_count = Counter(direction_votes)
             facing_direction = direction_count.most_common(1)[0][0]
             
