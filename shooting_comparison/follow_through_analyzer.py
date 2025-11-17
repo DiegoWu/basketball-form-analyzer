@@ -7,9 +7,7 @@ and form maintenance duration.
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-import json
-
+from typing import Dict, List, Optional
 
 class FollowThroughAnalyzer:
     """

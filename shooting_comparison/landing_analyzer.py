@@ -6,9 +6,7 @@ It extracts key information about foot landing position and torso angle at landi
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-import json
-
+from typing import Dict, List, Tuple
 
 class LandingAnalyzer:
     """

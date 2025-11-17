@@ -9,10 +9,10 @@ import cv2
 import numpy as np
 import os
 import json
-from typing import Dict, List, Tuple, Optional
-import matplotlib.pyplot as plt
+from typing import Dict, List, Tuple
 from matplotlib.colors import LinearSegmentedColormap
-
+import sys
+import traceback
 
 class ShootingComparisonVisualizer:
     """
@@ -698,7 +698,6 @@ class ShootingComparisonVisualizer:
             
         except Exception as e:
             print(f"❌ Error creating {title} visualization: {e}")
-            import traceback
             traceback.print_exc()
             return False
     
@@ -759,10 +758,7 @@ def create_shooting_comparison_visualization(comparison_results_file: str,
     
     return visualizer.create_comparison_video(output_filename)
 
-
 if __name__ == "__main__":
-    # Example usage
-    import sys
     
     if len(sys.argv) < 2:
         print("Usage: python shooting_comparison_visualizer.py <results_file> [output_filename]")

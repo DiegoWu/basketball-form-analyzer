@@ -7,28 +7,22 @@ by analyzing extracted pose and ball data from the integrated pipeline.
 """
 
 import os
-import sys
 import json
-import cv2
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog
 from typing import List, Dict, Optional, Tuple
-import numpy as np
 from datetime import datetime
-
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import traceback
 
 # from data_collection.dtw_processor import DTWProcessor
-from shooting_comparison.shooting_comparison_visualizer import ShootingComparisonVisualizer
-from shooting_comparison.analysis_utils import get_analysis_utils
-from shooting_comparison.setup_analyzer import SetupAnalyzer
-from shooting_comparison.loading_analyzer import LoadingAnalyzer
-from shooting_comparison.rising_analyzer import RisingAnalyzer
-from shooting_comparison.release_analyzer import ReleaseAnalyzer
-from shooting_comparison.follow_through_analyzer import FollowThroughAnalyzer
-from shooting_comparison.landing_analyzer import LandingAnalyzer
-from shooting_comparison.analysis_interpreter import AnalysisInterpreter
+from .utils.analysis_utils import get_analysis_utils
+from .setup_analyzer import SetupAnalyzer
+from .loading_analyzer import LoadingAnalyzer
+from .rising_analyzer import RisingAnalyzer
+from .release_analyzer import ReleaseAnalyzer
+from .follow_through_analyzer import FollowThroughAnalyzer
+from .landing_analyzer import LandingAnalyzer
+from .analysis_interpreter import AnalysisInterpreter
 
 class ShootingComparisonPipeline:
     """Pipeline for comparing basketball shooting forms between two videos"""
@@ -142,7 +136,7 @@ class ShootingComparisonPipeline:
         """
         base_name = os.path.splitext(os.path.basename(video_path))[0]
         result_file = os.path.join(self.results_dir, f"{base_name}_normalized_output.json")
-        
+
         print(f"\n🔍 Processing: {os.path.basename(video_path)}")
         
         # Check if results already exist
@@ -155,48 +149,36 @@ class ShootingComparisonPipeline:
                     
                     # Count shots in the data
                     shots = data.get('metadata', {}).get('shots', {})
-                    
+                    print('shots', type(shots))
+
                     # Handle both list and dictionary formats for shots
-                    if isinstance(shots, list):
-                        shot_count = len(shots)
-                        print(f"🎯 Found {shot_count} shots in the video")
-                        
-                        # Display shot information for list format
-                        if shot_count > 0:
-                            print("📋 Shot Information:")
-                            for i, shot_info in enumerate(shots):
-                                if isinstance(shot_info, dict):
-                                    shot_id = shot_info.get('shot_id', i+1)
-                                    original_id = shot_info.get('original_shot_id', 'N/A')
-                                    start_frame = shot_info.get('start_frame', 'N/A')
-                                    end_frame = shot_info.get('end_frame', 'N/A')
-                                    fixed_torso = shot_info.get('fixed_torso', 'N/A')
-                                    if original_id != 'N/A' and original_id != shot_id:
-                                        print(f"   shot{shot_id}: Frames {start_frame}-{end_frame}, Torso: {fixed_torso} (Original ID: {original_id})")
-                                    else:
-                                        print(f"   shot{shot_id}: Frames {start_frame}-{end_frame}, Torso: {fixed_torso}")
-                                else:
-                                    print(f"   shot{i+1}: {shot_info}")
-                    else:
-                        # Dictionary format
-                        shot_count = len(shots)
-                        print(f"🎯 Found {shot_count} shots in the video")
-                        
-                        # Display shot information for dictionary format
-                        if shot_count > 0:
-                            print("📋 Shot Information:")
-                            for shot_id, shot_info in shots.items():
+                   
+                    shot_count = len(shots)
+                    print(f"🎯 Found {shot_count} shots in the video")
+                    
+                    # Display shot information for list format
+                    if shot_count > 0:
+                        print("📋 Shot Information:")
+                        for i, shot_info in enumerate(shots):
+                            if isinstance(shot_info, dict):
+                                shot_id = shot_info.get('shot_id', i+1)
+                                original_id = shot_info.get('original_shot_id', 'N/A')
                                 start_frame = shot_info.get('start_frame', 'N/A')
                                 end_frame = shot_info.get('end_frame', 'N/A')
                                 fixed_torso = shot_info.get('fixed_torso', 'N/A')
-                                print(f"   {shot_id}: Frames {start_frame}-{end_frame}, Torso: {fixed_torso}")
-                    
+                                if original_id != 'N/A' and original_id != shot_id:
+                                    print(f"   shot{shot_id}: Frames {start_frame}-{end_frame}, Torso: {fixed_torso} (Original ID: {original_id})")
+                                else:
+                                    print(f"   shot{shot_id}: Frames {start_frame}-{end_frame}, Torso: {fixed_torso}")
+                            else:
+                                print(f"   shot{i+1}: {shot_info}")
+
                     # Store metadata for analysis
                     if video_path == self.video1_path:
                         self.video1_metadata = data.get('metadata', {})
                     elif video_path == self.video2_path:
                         self.video2_metadata = data.get('metadata', {})
-                    
+
                     return data
             except Exception as e:
                 print(f"❌ Error loading existing results: {e}")
@@ -248,7 +230,6 @@ class ShootingComparisonPipeline:
         print("=" * 50)
         
         try:
-            print("🔍 [DEBUG] Starting perform_comparison...")
             
             # Initialize comparison results
             comparison_results = {}
@@ -257,7 +238,7 @@ class ShootingComparisonPipeline:
             filtered_video1_data = self._filter_data_by_shot(self.video1_data, selected_shot1)
             filtered_video2_data = self._filter_data_by_shot(self.video2_data, selected_shot2)
             
-            print("🔍 [DEBUG] Filtered data:")
+            # print("🔍 [DEBUG] Filtered data:")
             
             # Check if filtered data is None before accessing
             if filtered_video1_data is None:
@@ -334,78 +315,6 @@ class ShootingComparisonPipeline:
             }
             print("🔍 [DEBUG] Landing analysis completed")
             
-            # DTW Analysis temporarily disabled
-            print("⏸️  DTW Analysis temporarily disabled - focusing on Set-up and Loading analysis")
-            
-            # # DTW Analysis (temporarily commented out)
-            # print("📊 Performing coordinate-based overall comparison...")
-            # overall_coord_result = self.dtw_processor.analyze_overall_phases_coordinate(
-            #     filtered_video1_data, filtered_video2_data, selected_hand
-            # )
-            # comparison_results['coordinate_overall'] = overall_coord_result
-            # print("🔍 [DEBUG] Overall coordinate comparison completed")
-            
-            # print("📊 Performing feature-based overall comparison...")
-            # overall_feature_result = self.dtw_processor.analyze_overall_phases_feature(
-            #     filtered_video1_data, filtered_video2_data, selected_hand
-            # )
-            # comparison_results['feature_overall'] = overall_feature_result
-            # print("🔍 [DEBUG] Overall feature comparison completed")
-            
-            # # Phase-specific comparisons
-            # phases = ['loading', 'rising', 'release', 'follow_through']
-            
-            # for phase in phases:
-            #     print(f"📊 Performing {phase} phases coordinate comparison...")
-            #     try:
-            #         if phase == 'loading':
-            #             coord_result = self.dtw_processor.analyze_loading_phases_coordinate(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         elif phase == 'rising':
-            #             coord_result = self.dtw_processor.analyze_rising_phases_coordinate(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         elif phase == 'release':
-            #             coord_result = self.dtw_processor.analyze_release_phases_coordinate(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         elif phase == 'follow_through':
-            #             coord_result = self.dtw_processor.analyze_follow_through_phases_coordinate(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         comparison_results[f'{phase}_coordinate'] = coord_result
-            #         print(f"🔍 [DEBUG] {phase} coordinate comparison completed")
-            #     except Exception as e:
-            #         print(f"⚠️  Error in {phase} coordinate comparison: {e}")
-            #         comparison_results[f'{phase}_coordinate'] = None
-                
-            #     print(f"📊 Performing {phase} phases feature comparison...")
-            #     try:
-            #         if phase == 'loading':
-            #             feature_result = self.dtw_processor.analyze_loading_phases(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         elif phase == 'rising':
-            #             feature_result = self.dtw_processor.analyze_rising_phases(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         elif phase == 'release':
-            #             feature_result = self.dtw_processor.analyze_release_phases(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         elif phase == 'follow_through':
-            #             feature_result = self.dtw_processor.analyze_follow_through_phases(
-            #                 filtered_video1_data, filtered_video2_data, selected_hand
-            #             )
-            #         comparison_results[phase] = feature_result
-            #         print(f"🔍 [DEBUG] {phase} feature comparison completed")
-            #     except Exception as e:
-            #         print(f"⚠️  Error in {phase} feature comparison: {e}")
-            #         comparison_results[phase] = None
-            
-            print("🔍 [DEBUG] All phase comparisons completed")
-            
             # Add metadata
             comparison_results['metadata'] = {
                 'video1_path': self.video1_path,
@@ -446,7 +355,6 @@ class ShootingComparisonPipeline:
             
         except Exception as e:
             print(f"❌ Error during comparison: {e}")
-            import traceback
             traceback.print_exc()
             return None
         finally:
@@ -574,7 +482,7 @@ class ShootingComparisonPipeline:
         # Create filtered data
         filtered_data = data.copy()
         filtered_data['frames'] = filtered_frames
-        print(filtered_data)
+
         print(f"✅ Filtered {len(filtered_frames)} frames for shot '{selected_shot}'")
         
         return filtered_data
@@ -691,7 +599,6 @@ class ShootingComparisonPipeline:
             
         except Exception as e:
             print(f"❌ Error printing summary: {e}")
-            import traceback
             traceback.print_exc()
     
     def _display_phase_transition_analysis(self, phase_analysis: Dict):
@@ -739,8 +646,6 @@ class ShootingComparisonPipeline:
             for rec in comparison['recommendations']:
                 print(f"     • {rec}")
         
-
-
     def _display_setup_analysis(self, setup_analysis: Dict):
         """Display set-up analysis results."""
         video1_setup = setup_analysis.get('video1', {})
@@ -1466,115 +1371,8 @@ class ShootingComparisonPipeline:
         Returns:
             True if successful, False otherwise
         """
-        print("🏀 Basketball Shooting Form Comparison Pipeline")
-        print("=" * 60)
-        
-        # Step 1: Select videos
-        video1_path, video2_path = self.select_videos()
-        if not video1_path or not video2_path:
-            return False
-        
-        # Set video paths for metadata tracking
-        self.video1_path = video1_path
-        self.video2_path = video2_path
-        
-        # Step 2: Process videos
-        print("\n🔄 STEP 2: Processing Videos")
-        print("=" * 50)
-        
-        self.video1_data = self.process_video_data(video1_path)
-        if not self.video1_data:
-            print("❌ Failed to process first video")
-            return False
-            
-        self.video2_data = self.process_video_data(video2_path)
-        if not self.video2_data:
-            print("❌ Failed to process second video")
-            return False
-        
-        # Ensure metadata is set
-        if not self.video1_metadata:
-            self.video1_metadata = self.video1_data.get('metadata', {})
-        if not self.video2_metadata:
-            self.video2_metadata = self.video2_data.get('metadata', {})
-        
-        # Step 3: Select shots for comparison
-        selected_shot1, selected_shot2 = self.select_shots(self.video1_data, self.video2_data)
-        
-        # Check if we have valid shot selections
-        shots1 = self.video1_data.get('metadata', {}).get('shots', [])
-        shots2 = self.video2_data.get('metadata', {}).get('shots', [])
-        
-        if len(shots1) == 0 and len(shots2) == 0:
-            print("❌ No shots detected in either video. Cannot perform comparison.")
-            return False
-        elif selected_shot1 is None and selected_shot2 is None:
-            print("✅ All shots selected for comparison.")
-        elif selected_shot1 is None or selected_shot2 is None:
-            print("❌ Please select specific shots for comparison or 'all' for all shots.")
-            return False
-        else:
-            print(f"✅ Selected specific shots: Video 1 - {selected_shot1}, Video 2 - {selected_shot2}")
-        
-        # Step 4: Perform comparison
-        comparison_results = self.perform_comparison(selected_shot1, selected_shot2)
-        if not comparison_results:
-            return False
-        
-        # Step 5: Save results
-        if not self.save_comparison_results():
-            return False
-        
-        # Step 6: Print summary
-        self.print_comparison_summary()
-        
-        # Step 7: Create visualization (optional)
-        print("\n🎬 STEP 7: Visualization (Optional)")
-        print("=" * 50)
-        
-        # Ask user if they want to create visualizations
-        while True:
-            create_viz = input("Do you want to create comparison visualizations? (y/n): ").lower().strip()
-            if create_viz in ['y', 'yes', 'n', 'no']:
-                break
-            print("Please enter 'y' for yes or 'n' for no.")
-        
-        if create_viz in ['y', 'yes']:
-            try:
-                visualizer = ShootingComparisonVisualizer()
-                video_info = {
-                    'video1_path': self.video1_path,
-                    'video2_path': self.video2_path,
-                    'video1_fps': self.video1_metadata.get('fps', 30.0) if self.video1_metadata else 30.0,
-                    'video2_fps': self.video2_metadata.get('fps', 30.0) if self.video2_metadata else 30.0,
-                    'video1_frames': len(self.video1_data.get('frames', [])),
-                    'video2_frames': len(self.video2_data.get('frames', []))
-                }
-                
-                # Create comprehensive visualizations
-                output_videos = visualizer.create_comprehensive_visualizations(
-                    self.video1_path, self.video2_path,
-                    self.video1_data, self.video2_data,
-                    self.comparison_results, video_info
-                )
-                
-                if output_videos:
-                    print(f"\n✅ Created {len(output_videos)} visualization videos:")
-                    for video_type, video_path in output_videos.items():
-                        print(f"   📹 {video_type}: {os.path.basename(video_path)}")
-                else:
-                    print("❌ No visualization videos were created")
-                    
-            except Exception as e:
-                print(f"❌ Error creating visualizations: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            print("⏭️  Skipping visualization creation.")
-        
-        print("\n🎉 Comparison pipeline completed successfully!")
-        return True
-    
+        pass
+
     def select_shots(self, video1_data: Dict, video2_data: Dict) -> Tuple[Optional[str], Optional[str]]:
         """
         Select specific shots for comparison
@@ -1618,7 +1416,7 @@ class ShootingComparisonPipeline:
             except KeyboardInterrupt:
                 print("\n❌ Selection cancelled.")
                 return None, None
-    
+
     def _select_specific_shots(self, shots1: Dict, shots2: Dict) -> Tuple[Optional[str], Optional[str]]:
         """
         Select specific shots from each video
@@ -1750,7 +1548,6 @@ class ShootingComparisonPipeline:
         
         return phase_transitions
 
-
 def main():
     """Main function to run the shooting comparison pipeline"""
     try:
@@ -1766,7 +1563,6 @@ def main():
         print("\n⚠️ Pipeline interrupted by user")
     except Exception as e:
         print(f"\n❌ Unexpected error: {e}")
-
 
 if __name__ == "__main__":
     main()

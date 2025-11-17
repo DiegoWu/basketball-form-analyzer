@@ -7,13 +7,7 @@ Also includes setpoint detection functionality.
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-import json
-import os
-import cv2
-import tkinter as tk
-from tkinter import filedialog
-
+from typing import Dict, List, Tuple, Optional
 
 class RisingAnalyzer:
     """

@@ -6,9 +6,7 @@ It extracts key information from Loading and Loading-Rising phases combined.
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-import json
-
+from typing import Dict, List, Optional
 
 class LoadingAnalyzer:
     """

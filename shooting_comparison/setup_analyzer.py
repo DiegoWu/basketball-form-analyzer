@@ -6,8 +6,7 @@ It extracts key information from the 3 frames before the Loading phase.
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-import json
+from typing import Dict, List
 
 
 class SetupAnalyzer:

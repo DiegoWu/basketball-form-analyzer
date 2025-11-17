@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Dict, Optional, Tuple
 import numpy as np
 import traceback
+
 from .shooting_comparison_pipeline import ShootingComparisonPipeline
 from .analysis_interpreter import AnalysisInterpreter
 from .dtw_interpreter_extension import DTWInterpreterExtension
@@ -76,266 +77,22 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
         print(f"🎯 Shot Selection: {'Enabled' if enable_shot_selection else 'Disabled'}")
         print("=" * 60)
         
-        # Run existing comparison pipeline exactly as before
-        print("\n🔄 Phase 1: Running existing phase-based comparison analysis...")
-        try:
-            # Use existing pipeline to get phase analysis
-            existing_pipeline = ShootingComparisonPipeline()
-            
-            # Set up the pipeline properly
-            existing_pipeline.video1_path = video1_path
-            existing_pipeline.video2_path = video2_path
-            
-            # Try to process video data first
-            print("   📹 Processing video data...")
-            existing_pipeline.video1_data = existing_pipeline.process_video_data(video1_path)
-            existing_pipeline.video2_data = existing_pipeline.process_video_data(video2_path)
-
-            # Set metadata for analyzers
-            existing_pipeline.video1_metadata = existing_pipeline.video1_data.get('metadata', {})
-            existing_pipeline.video2_metadata = existing_pipeline.video2_data.get('metadata', {})
-            
-            print(f"   ✅ Video 1: {len(existing_pipeline.video1_data.get('frames', []))} frames")
-            print(f"   ✅ Video 2: {len(existing_pipeline.video2_data.get('frames', []))} frames")
-            
-            # Handle shot selection if enabled
-            selected_shot1 = None
-            selected_shot2 = None
-            
-            if enable_shot_selection:
-                print("\n🎯 Shot Selection for Enhanced Analysis")
-                print("=" * 50)
-                
-                # Check if shots are available
-                shots1 = existing_pipeline.video1_data.get('metadata', {}).get('shots', [])
-                shots2 = existing_pipeline.video2_data.get('metadata', {}).get('shots', [])
-                
-                shot_count1 = len(shots1)
-                shot_count2 = len(shots2)
-                
-                print(f"📹 Video 1: {shot_count1} shots detected")
-                print(f"📹 Video 2: {shot_count2} shots detected")
-                
-                if shot_count1 > 0 or shot_count2 > 0:
-                    # Ask user for shot selection
-                    print("\n🔍 Shot Selection Options:")
-                    print("1. Analyze all shots (integrated analysis)")
-                    print("2. Select specific shots for comparison")
-                    
-                    while True:
-                        try:
-                            choice = input("\nSelect option (1 or 2): ").strip()
-                            if choice == "1":
-                                print("✅ Selected: Analyze all shots (integrated)")
-                                selected_shot1 = None
-                                selected_shot2 = None
-                                break
-                            elif choice == "2":
-                                print("✅ Selected: Select specific shots")
-                                selected_shot1, selected_shot2 = self._select_specific_shots_for_enhanced(
-                                    existing_pipeline.video1_data, existing_pipeline.video2_data
-                                )
-                                break
-                            else:
-                                print("❌ Invalid choice. Please enter 1 or 2.")
-                        except KeyboardInterrupt:
-                            print("\n❌ Selection cancelled.")
-                            return {'error': 'Shot selection cancelled'}
-                else:
-                    print("⚠️ No shots detected, proceeding with full video analysis")
-                    selected_shot1 = None
-                    selected_shot2 = None
-            else:
-                print("🎯 Shot selection disabled - using full video analysis")
-                selected_shot1 = None
-                selected_shot2 = None
-            
-            # Run phase analysis with selected shots
-            existing_results = existing_pipeline.perform_comparison(selected_shot1, selected_shot2)
-            
-            if not existing_results:
-                print("❌ Phase analysis failed")
-                return {'error': 'Phase analysis failed'}
-                
-            print("✅ Phase-based analysis completed")
-            
-        except Exception as e:
-            print(f"❌ Phase analysis failed: {e}")
-            traceback.print_exc()
-            return {'error': f'Phase analysis failed: {str(e)}'}
+        # Run phase analysis
+        existing_results, existing_pipeline = self._run_phase_analysis(video1_path, video2_path, enable_shot_selection)
+        if 'error' in existing_results:
+            return existing_results
         
-        # Run existing interpretation exactly as before
-        print("\n🔄 Phase 2: Interpreting phase-based analysis...")
-        try:
-            # Debug: Check what's in existing_results
-            print(f"   📊 Available keys in existing_results: {list(existing_results.keys())}")
-            if 'setup_analysis' in existing_results:
-                print("   ✅ setup_analysis found")
-            if 'loading_analysis' in existing_results:
-                print("   ✅ loading_analysis found")
-            if 'rising_analysis' in existing_results:
-                print("   ✅ rising_analysis found")
-            if 'release_analysis' in existing_results:
-                print("   ✅ release_analysis found")
-            if 'follow_through_analysis' in existing_results:
-                print("   ✅ follow_through_analysis found")
-            if 'landing_analysis' in existing_results:
-                print("   ✅ landing_analysis found")
-            
-            existing_interpretation = self.existing_interpreter.interpret_comparison_results(existing_results)
-            
-            # Debug: Check what's in interpretation
-            print(f"   📊 Interpretation keys: {list(existing_interpretation.keys())}")
-            if 'text_analysis' in existing_interpretation:
-                text_analysis = existing_interpretation['text_analysis']
-                print(f"   📝 Text analysis phases: {list(text_analysis.keys())}")
-                for phase, analysis in text_analysis.items():
-                    differences = analysis.get('differences', [])
-                    print(f"      • {phase}: {len(differences)} differences")
-                    if differences:
-                        print(f"         - {differences[0]}")
-            
-            print("✅ Phase-based interpretation completed")
-        except Exception as e:
-            print(f"⚠️ Interpretation failed: {e}")
-            existing_interpretation = {'error': f'Interpretation failed: {str(e)}'}
+        # Run phase interpretation
+        existing_interpretation = self._run_phase_interpretation(existing_results)
         
-        # If DTW not requested, return existing results with interpretation
+        # If DTW not requested, return existing results
         if not include_dtw:
-            print("\n📋 DTW analysis skipped - returning standard results")
-            final_results = existing_results.copy()
-            final_results['interpretation'] = existing_interpretation
-            final_results['metadata']['analysis_type'] = 'standard'
-            
-            if save_results:
-                self._save_results(final_results, video1_path, video2_path, suffix='_standard')
-            
-            return final_results
+            return self._finalize_standard_results(existing_results, existing_interpretation, 
+                                                   video1_path, video2_path, save_results)
         
         # Add DTW analysis
-        print("\n🔄 Phase 3: Adding DTW motion analysis...")
-        try:
-            # Use video data from existing pipeline
-            video1_data = existing_pipeline.video1_data
-            video2_data = existing_pipeline.video2_data
-            if video1_data and video2_data:
-                selected_hand = existing_results.get('metadata', {}).get('selected_hand', 'right')
-                print(f"   🤚 Using {selected_hand} hand analysis")
-                print(f"   📊 Video 1 frames: {len(video1_data.get('frames', []))}")
-                print(f"   📊 Video 2 frames: {len(video2_data.get('frames', []))}")
-                
-                # Add video data to existing results for DTW analysis
-                # Keep full data for DTW analysis
-                existing_results['video1_data'] = video1_data
-                existing_results['video2_data'] = video2_data
-                
-                # Extend existing interpretation with DTW
-                enhanced_interpretation = self.dtw_extension.extend_existing_interpretation(
-                    existing_interpretation, existing_results, video1_data, video2_data, selected_hand
-                )
-                
-                # Get DTW analysis results from enhanced interpretation
-                dtw_analysis = enhanced_interpretation.get('dtw_analysis', {})
-                
-                # Ensure existing text analysis is preserved
-                if 'text_analysis' in existing_interpretation:
-                    enhanced_interpretation['text_analysis'] = existing_interpretation['text_analysis']
-                    print("✅ Preserved existing text analysis")
-                
-                # Ensure existing key insights are preserved
-                if 'key_insights' in existing_interpretation:
-                    if 'key_insights' not in enhanced_interpretation:
-                        enhanced_interpretation['key_insights'] = []
-                    enhanced_interpretation['key_insights'].extend(existing_interpretation['key_insights'])
-                    print("✅ Preserved existing key insights")
-                
-                # Combine results
-                final_results = existing_results.copy()
-                final_results['interpretation'] = enhanced_interpretation
-                final_results['metadata']['dtw_analysis_included'] = True
-                final_results['metadata']['analysis_type'] = 'enhanced'
-                
-                # Add DTW analysis results to final_results
-                if dtw_analysis:
-                    final_results['dtw_analysis'] = dtw_analysis
-                    # Update overall similarity from DTW analysis
-                    if 'overall_similarity' in dtw_analysis:
-                        final_results['overall_similarity'] = dtw_analysis['overall_similarity']
-                        final_results['grade'] = dtw_analysis.get('grade', 'N/A')
-                        final_results['confidence'] = dtw_analysis.get('metadata', {}).get('analysis_confidence', 'Unknown')
-                        print(f"✅ Updated overall similarity to {dtw_analysis['overall_similarity']:.1f}% from DTW analysis")
-                                
-                print("✅ DTW analysis completed and integrated successfully")
-                
-                # Create DTW visualizations if requested
-                if create_visualizations:
-                    print("\n🎨 Phase 4: Creating DTW visualizations...")
-                    print(f"   🔍 Debug: create_visualizations = {create_visualizations}")
-                    
-                    try:
-                        print("   ✅ DTWVisualizer imported successfully")
-                        
-                        # Check if we have the required DTW results
-                        dtw_motion_analysis = enhanced_interpretation.get('dtw_motion_analysis', {})
-                        print(f"   📊 DTW motion analysis keys: {list(dtw_motion_analysis.keys())}")
-                        
-                        visualizer = DTWVisualizer()
-                        print("   ✅ DTWVisualizer instance created")
-                        
-                        # Use the complete DTW results instead of just motion analysis
-                        dtw_results_for_viz = {
-                            'dtw_analysis': dtw_motion_analysis  # Wrap in expected structure
-                        }
-                        
-                        print("   🎨 Starting comprehensive DTW report creation...")
-                        visualization_files = visualizer.create_comprehensive_dtw_report(
-                            dtw_results_for_viz, 
-                            video1_data, video2_data, video1_path, video2_path
-                        )
-                        
-                        if visualization_files:
-                            final_results['metadata']['visualizations'] = visualization_files
-                            print(f"   ✅ Created {len(visualization_files)} DTW visualization files")
-                            for viz_type, file_path in visualization_files.items():
-                                if file_path:
-                                    print(f"      📁 {viz_type}: {file_path}")
-                        else:
-                            print("   ⚠️ No visualization files were created")
-                    
-                    except ImportError as import_error:
-                        print(f"   ❌ Import error: {import_error}")
-                        final_results['metadata']['visualization_error'] = f'Import error: {str(import_error)}'
-                    except Exception as viz_error:
-                        print(f"   ❌ Visualization creation failed: {viz_error}")
-                        print(f"   🔍 Error type: {type(viz_error).__name__}")
-                        print(f"   📜 Traceback: {traceback.format_exc()}")
-                        final_results['metadata']['visualization_error'] = str(viz_error)
-                else:
-                    print("\n🎨 Phase 4: DTW visualizations skipped (disabled)")
-
-                # Remove frame data from final results to reduce file size
-                final_results['video1_data']['frames'] = []
-                final_results['video2_data']['frames'] = []
-            else:
-                print("⚠️ Could not load normalized data for DTW analysis")
-                print("   📋 Falling back to existing analysis only")
-                
-                final_results = existing_results.copy()
-                final_results['interpretation'] = existing_interpretation
-                final_results['metadata']['dtw_analysis_included'] = False
-                final_results['metadata']['analysis_type'] = 'standard_fallback'
-                final_results['metadata']['dtw_error'] = 'Normalized data not available'
-            
-        
-        except Exception as e:
-            print(f"❌ DTW analysis failed: {e}")
-            print("   📋 Falling back to existing analysis")
-            
-            final_results = existing_results.copy()
-            final_results['interpretation'] = existing_interpretation
-            final_results['metadata']['dtw_analysis_included'] = False
-            final_results['metadata']['analysis_type'] = 'standard_fallback'
-            final_results['metadata']['dtw_error'] = str(e)
+        final_results = self._run_dtw_analysis(existing_results, existing_interpretation, 
+                                              existing_pipeline, create_visualizations)
         
         # Add final metadata
         final_results['metadata']['pipeline_version'] = 'enhanced_v1.0'
@@ -350,6 +107,305 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
         # Print summary
         self._print_analysis_summary(final_results)
         
+        return final_results
+    
+    def _run_phase_analysis(self, video1_path: str, video2_path: str, 
+                           enable_shot_selection: bool) -> Tuple[Dict, 'ShootingComparisonPipeline']:
+        """
+        Run phase-based comparison analysis.
+        
+        Returns:
+            Tuple of (results dict, pipeline instance)
+        """
+        print("\n🔄 Phase 1: Running existing phase-based comparison analysis...")
+        try:
+            # Use existing pipeline to get phase analysis
+            existing_pipeline = ShootingComparisonPipeline()
+            existing_pipeline.video1_path = video1_path
+            existing_pipeline.video2_path = video2_path
+            
+            # Process video data
+            print("   📹 Processing video data...")
+            existing_pipeline.video1_data = existing_pipeline.process_video_data(video1_path)
+            existing_pipeline.video2_data = existing_pipeline.process_video_data(video2_path)
+
+            # Set metadata for analyzers
+            existing_pipeline.video1_metadata = existing_pipeline.video1_data.get('metadata', {})
+            existing_pipeline.video2_metadata = existing_pipeline.video2_data.get('metadata', {})
+            
+            print(f"   ✅ Video 1: {len(existing_pipeline.video1_data.get('frames', []))} frames")
+            print(f"   ✅ Video 2: {len(existing_pipeline.video2_data.get('frames', []))} frames")
+            
+            # Handle shot selection
+            selected_shot1, selected_shot2 = self._handle_shot_selection(
+                existing_pipeline.video1_data, existing_pipeline.video2_data, enable_shot_selection
+            )
+            
+            if selected_shot1 is False and selected_shot2 is False:
+                # Selection was cancelled
+                return {'error': 'Shot selection cancelled'}, existing_pipeline
+            
+            # Run phase analysis with selected shots
+            existing_results = existing_pipeline.perform_comparison(selected_shot1, selected_shot2)
+            
+            if not existing_results:
+                print("❌ Phase analysis failed")
+                return {'error': 'Phase analysis failed'}, existing_pipeline
+                
+            print("✅ Phase-based analysis completed")
+            return existing_results, existing_pipeline
+            
+        except Exception as e:
+            print(f"❌ Phase analysis failed: {e}")
+            traceback.print_exc()
+            return {'error': f'Phase analysis failed: {str(e)}'}, None
+    
+    def _run_phase_interpretation(self, existing_results: Dict) -> Dict:
+        """
+        Interpret phase-based analysis results.
+        
+        Returns:
+            Interpretation dict
+        """
+        print("\n🔄 Phase 2: Interpreting phase-based analysis...")
+        try:
+            # Debug: Check what's in existing_results
+            # print(f"   📊 Available keys in existing_results: {list(existing_results.keys())}")
+            phase_keys = ['setup_analysis', 'loading_analysis', 'rising_analysis', 
+                         'release_analysis', 'follow_through_analysis', 'landing_analysis']
+            
+            # for key in phase_keys:
+            #     if key in existing_results:
+            #         print(f"   ✅ {key} found")
+            
+            existing_interpretation = self.existing_interpreter.interpret_comparison_results(existing_results)
+            
+            # Debug: Check interpretation
+            # print(f"   📊 Interpretation keys: {list(existing_interpretation.keys())}")
+            # if 'text_analysis' in existing_interpretation:
+            #     text_analysis = existing_interpretation['text_analysis']
+            #     print(f"   📝 Text analysis phases: {list(text_analysis.keys())}")
+            #     for phase, analysis in text_analysis.items():
+            #         differences = analysis.get('differences', [])
+            #         print(f"      • {phase}: {len(differences)} differences")
+            #         if differences:
+            #             print(f"         - {differences[0]}")
+            
+            print("✅ Phase-based interpretation completed")
+            return existing_interpretation
+            
+        except Exception as e:
+            print(f"⚠️ Interpretation failed: {e}")
+            return {'error': f'Interpretation failed: {str(e)}'}
+    
+    def _handle_shot_selection(self, video1_data: Dict, video2_data: Dict, 
+                              enable_shot_selection: bool) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Handle shot selection logic.
+        
+        Returns:
+            Tuple of (selected_shot1, selected_shot2)
+            Returns (False, False) if selection was cancelled
+        """
+        if not enable_shot_selection:
+            print("🎯 Shot selection disabled - using full video analysis")
+            return None, None
+        
+        print("\n🎯 Shot Selection for Enhanced Analysis")
+        print("=" * 50)
+        
+        shots1 = video1_data.get('metadata', {}).get('shots', [])
+        shots2 = video2_data.get('metadata', {}).get('shots', [])
+        
+        shot_count1 = len(shots1)
+        shot_count2 = len(shots2)
+        
+        print(f"📹 Video 1: {shot_count1} shots detected")
+        print(f"📹 Video 2: {shot_count2} shots detected")
+        
+        if shot_count1 == 0 and shot_count2 == 0:
+            print("⚠️ No shots detected, proceeding with full video analysis")
+            return None, None
+        
+        # Ask user for shot selection
+        print("\n🔍 Shot Selection Options:")
+        print("1. Analyze all shots (integrated analysis)")
+        print("2. Select specific shots for comparison")
+        
+        while True:
+            try:
+                choice = input("\nSelect option (1 or 2): ").strip()
+                if choice == "1":
+                    print("✅ Selected: Analyze all shots (integrated)")
+                    return None, None
+                elif choice == "2":
+                    print("✅ Selected: Select specific shots")
+                    return self._select_specific_shots_for_enhanced(video1_data, video2_data)
+                else:
+                    print("❌ Invalid choice. Please enter 1 or 2.")
+            except KeyboardInterrupt:
+                print("\n❌ Selection cancelled.")
+                return False, False
+    
+    def _finalize_standard_results(self, existing_results: Dict, existing_interpretation: Dict,
+                                  video1_path: str, video2_path: str, save_results: bool) -> Dict:
+        """
+        Finalize results for standard (non-DTW) analysis.
+        
+        Returns:
+            Final results dict
+        """
+        print("\n📋 DTW analysis skipped - returning standard results")
+        final_results = existing_results.copy()
+        final_results['interpretation'] = existing_interpretation
+        final_results['metadata']['analysis_type'] = 'standard'
+        
+        if save_results:
+            self._save_results(final_results, video1_path, video2_path, suffix='_standard')
+        
+        return final_results
+    
+    def _run_dtw_analysis(self, existing_results: Dict, existing_interpretation: Dict,
+                         existing_pipeline: 'ShootingComparisonPipeline',
+                         create_visualizations: bool) -> Dict:
+        """
+        Add DTW analysis to existing results.
+        
+        Returns:
+            Enhanced results dict
+        """
+        print("\n🔄 Phase 3: Adding DTW motion analysis...")
+        try:
+            video1_data = existing_pipeline.video1_data
+            video2_data = existing_pipeline.video2_data
+            
+            if not video1_data or not video2_data:
+                print("⚠️ Could not load normalized data for DTW analysis")
+                return self._create_fallback_results(existing_results, existing_interpretation,
+                                                    'Normalized data not available')
+            
+            selected_hand = existing_results.get('metadata', {}).get('selected_hand', 'right')
+            print(f"   🤚 Using {selected_hand} hand analysis")
+            print(f"   📊 Video 1 frames: {len(video1_data.get('frames', []))}")
+            print(f"   📊 Video 2 frames: {len(video2_data.get('frames', []))}")
+            
+            # Add video data to existing results for DTW analysis
+            existing_results['video1_data'] = video1_data
+            existing_results['video2_data'] = video2_data
+            
+            # Extend existing interpretation with DTW
+            enhanced_interpretation = self.dtw_extension.extend_existing_interpretation(
+                existing_interpretation, existing_results, video1_data, video2_data, selected_hand
+            )
+            
+            # Preserve existing analysis
+            if 'text_analysis' in existing_interpretation:
+                enhanced_interpretation['text_analysis'] = existing_interpretation['text_analysis']
+                print("✅ Preserved existing text analysis")
+            
+            if 'key_insights' in existing_interpretation:
+                if 'key_insights' not in enhanced_interpretation:
+                    enhanced_interpretation['key_insights'] = []
+                enhanced_interpretation['key_insights'].extend(existing_interpretation['key_insights'])
+                print("✅ Preserved existing key insights")
+            
+            # Combine results
+            final_results = existing_results.copy()
+            final_results['interpretation'] = enhanced_interpretation
+            final_results['metadata']['dtw_analysis_included'] = True
+            final_results['metadata']['analysis_type'] = 'enhanced'
+            
+            # Add DTW analysis results
+            dtw_analysis = enhanced_interpretation.get('dtw_analysis', {})
+            if dtw_analysis:
+                final_results['dtw_analysis'] = dtw_analysis
+                if 'overall_similarity' in dtw_analysis:
+                    final_results['overall_similarity'] = dtw_analysis['overall_similarity']
+                    final_results['grade'] = dtw_analysis.get('grade', 'N/A')
+                    final_results['confidence'] = dtw_analysis.get('metadata', {}).get('analysis_confidence', 'Unknown')
+                    print(f"✅ Updated overall similarity to {dtw_analysis['overall_similarity']:.1f}% from DTW analysis")
+            
+            print("✅ DTW analysis completed and integrated successfully")
+            
+            # Create visualizations if requested
+            if create_visualizations:
+                final_results = self._create_dtw_visualizations(final_results, enhanced_interpretation,
+                                                               video1_data, video2_data)
+            
+            # Remove frame data to reduce file size
+            final_results['video1_data']['frames'] = []
+            final_results['video2_data']['frames'] = []
+            
+            return final_results
+            
+        except Exception as e:
+            print(f"❌ DTW analysis failed: {e}")
+            print("   📋 Falling back to existing analysis")
+            traceback.print_exc()
+            return self._create_fallback_results(existing_results, existing_interpretation, str(e))
+    
+    def _create_dtw_visualizations(self, final_results: Dict, enhanced_interpretation: Dict,
+                                  video1_data: Dict, video2_data: Dict) -> Dict:
+        """
+        Create DTW visualizations.
+        
+        Returns:
+            Updated results dict with visualization metadata
+        """
+        print("\n🎨 Phase 4: Creating DTW visualizations...")
+        print(f"   🔍 Debug: create_visualizations = True")
+        
+        try:
+            print("   ✅ DTWVisualizer imported successfully")
+            
+            dtw_motion_analysis = enhanced_interpretation.get('dtw_motion_analysis', {})
+            print(f"   📊 DTW motion analysis keys: {list(dtw_motion_analysis.keys())}")
+            
+            visualizer = DTWVisualizer()
+            print("   ✅ DTWVisualizer instance created")
+            
+            # Prepare DTW results for visualization
+            dtw_results_for_viz = {
+                'dtw_analysis': dtw_motion_analysis
+            }
+            
+            print("   🎨 Starting comprehensive DTW report creation...")
+            visualization_files = visualizer.create_comprehensive_dtw_report(
+                dtw_results_for_viz, 
+                video1_data, video2_data, 
+                self.video1_path, self.video2_path
+            )
+            
+            if visualization_files:
+                final_results['metadata']['visualizations'] = visualization_files
+                print(f"   ✅ Created {len(visualization_files)} DTW visualization files")
+                for viz_type, file_path in visualization_files.items():
+                    if file_path:
+                        print(f"      📁 {viz_type}: {file_path}")
+            else:
+                print("   ⚠️ No visualization files were created")
+            
+        except Exception as viz_error:
+            print(f"   ❌ Visualization creation failed: {viz_error}")
+            print(f"   🔍 Error type: {type(viz_error).__name__}")
+            print(f"   📜 Traceback: {traceback.format_exc()}")
+            final_results['metadata']['visualization_error'] = str(viz_error)
+        
+        return final_results
+    
+    def _create_fallback_results(self, existing_results: Dict, existing_interpretation: Dict,
+                                error_message: str) -> Dict:
+        """
+        Create fallback results when DTW analysis fails.
+        
+        Returns:
+            Standard results dict with error metadata
+        """
+        final_results = existing_results.copy()
+        final_results['interpretation'] = existing_interpretation
+        final_results['metadata']['dtw_analysis_included'] = False
+        final_results['metadata']['analysis_type'] = 'standard_fallback'
+        final_results['metadata']['dtw_error'] = error_message
         return final_results
     
     def _load_normalized_video_data(self, video_path: str) -> Optional[Dict]:

@@ -6,10 +6,7 @@ It extracts key information from Release phase including arm angles, ball positi
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-import json
-
-
+from typing import Dict, List, Optional
 class ReleaseAnalyzer:
     """
     Analyzer for release phase information.
