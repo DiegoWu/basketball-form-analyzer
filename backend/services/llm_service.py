@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from functools import lru_cache
 
 class LLMService:
 
@@ -30,7 +31,9 @@ class LLMService:
         
         return prompt_id
 
-    def _load_prompt(self):
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def load_prompt():
         try:
             with open("./backend/llm/prompts/system.txt", "r") as file:
                 system_prompt = file.read()
@@ -59,7 +62,7 @@ class LLMService:
             print("Prompt ID loaded:", prompt_id)
             data_input = self.load_txt_data()
             print("Data input loaded:", type(data_input))
-            system_prompt = self._load_prompt()
+            system_prompt = LLMService.load_prompt()
             print("System prompt loaded:", system_prompt)
             # Convert data_input to a txt string
             data_input_str = data_input

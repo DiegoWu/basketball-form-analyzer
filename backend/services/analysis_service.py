@@ -4,19 +4,14 @@ import shutil
 import math
 from datetime import datetime
 from fastapi import UploadFile, HTTPException
-from fastapi.responses import JSONResponse
-from typing import Dict, List, Optional
-from shooting_comparison.analysis_pipline import AnalysisPipeline
+from typing import Dict
 from shooting_comparison.analysis_interpreter import AnalysisInterpreter
 from shooting_comparison.enhanced_pipeline import EnhancedShootingComparisonPipeline
 from backend.routes.llm_routes import LLMService
 from backend.config import PLAYER_IDS, PLAYERS
 
-try:
-    from basketball_shooting_integrated_pipeline import BasketballShootingIntegratedPipeline
-    ANALYSIS_AVAILABLE = True 
-except ImportError:
-    ANALYSIS_AVAILABLE = False
+from basketball_shooting_integrated_pipeline import BasketballShootingIntegratedPipeline
+ANALYSIS_AVAILABLE = True 
 
 def clean_floats(obj):
     if isinstance(obj, dict):
@@ -73,24 +68,24 @@ def mock_compare_with_player(user_data: Dict, player_id: str) -> Dict:
         }
     }
 
-def analyze_video_service(video: UploadFile):
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-            shutil.copyfileobj(video.file, tmp_file)
-            video_path = tmp_file.name
+# def analyze_video_service(video: UploadFile):
+#     try:
+#         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+#             shutil.copyfileobj(video.file, tmp_file)
+#             video_path = tmp_file.name
 
-        if ANALYSIS_AVAILABLE:
-            pipeline = BasketballShootingIntegratedPipeline()
-            user_result = pipeline.run_full_pipeline(video_path, overwrite_mode=True, use_existing_extraction=False)
-        else:
-            user_result = mock_analyze_video(video_path)
+#         if ANALYSIS_AVAILABLE:
+#             pipeline = BasketballShootingIntegratedPipeline()
+#             user_result = pipeline.run_full_pipeline(video_path, overwrite_mode=True, use_existing_extraction=False)
+#         else:
+#             user_result = mock_analyze_video(video_path)
 
-        analysis_pipeline = AnalysisPipeline(video_path)
-        comparison_result = analysis_pipeline.run_basic_analysis()
-        os.unlink(video_path)
-        return user_result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+#         analysis_pipeline = AnalysisPipeline(video_path)
+#         comparison_result = analysis_pipeline.run_basic_analysis()
+#         os.unlink(video_path)
+#         return user_result
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 def compare_with_player_service(video: UploadFile, player_id: str, player_style: str):
     try:

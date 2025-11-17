@@ -9,22 +9,21 @@ them with synthetic NBA player motion profiles.
 import os
 import sys
 # Add current directory to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
 from fastapi.staticfiles import StaticFiles
 
-from backend.services.analysis_service import analyze_video_service, compare_with_player_service, auto_compare_service
+from backend.services.analysis_service import compare_with_player_service, auto_compare_service
 from backend.services.twilio_service import send_sms
 
 from fastapi import FastAPI, HTTPException, Request
 from backend.services.twilio_service import send_sms
-
 
 app = FastAPI(
     title="Basketball Form Analyzer - Synthetic Profiles Integration",
