@@ -6,10 +6,9 @@ Uses existing release_analysis features with weighted scoring system.
 Handles multiple release frames by averaging values with type-safe error handling.
 """
 
-import numpy as np
-from typing import Dict, Optional, List, Union
-import sys
-import os
+from typing import Dict, Optional, Union
+# import sys
+# import os
 
 # Add parent directory to path
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

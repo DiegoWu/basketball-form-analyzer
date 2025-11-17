@@ -6,8 +6,9 @@ Works with pre-normalized data (torso-scaled, hip-centered, direction-normalized
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List
 import pandas as pd
+
 from .dtw_config import DTW_FEATURE_WEIGHTS, PHASE_IMPORTANCE_WEIGHTS
 
 class DTWFeatureExtractor:
@@ -15,10 +16,10 @@ class DTWFeatureExtractor:
     Extracts DTW-compatible features from normalized shooting data.
     
     Handles pre-normalized data:
-    - Torso-based scale normalization
-    - Hip position coordinate normalization
-    - Left/right direction normalization
-    - Screen aspect ratio normalization
+        - Torso-based scale normalization
+        - Hip position coordinate normalization
+        - Left/right direction normalization
+        - Screen aspect ratio normalization
     """
     
     def __init__(self):

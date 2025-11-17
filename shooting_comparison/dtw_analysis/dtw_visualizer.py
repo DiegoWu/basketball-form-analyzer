@@ -12,17 +12,15 @@ import numpy as np
 import os
 from typing import Dict, List, Tuple, Optional
 import json
-import shooting_comparison.utils.calculation_utils as calculation_utils
-
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.animation import FuncAnimation
-from dtaidistance import dtw, similarity
+from dtaidistance import dtw
 
 MATPLOTLIB_AVAILABLE = True
 
 import cv2
 CV2_AVAILABLE = True
+
+import shooting_comparison.utils.calculation_utils as calculation_utils
 
 class DTWVisualizer:
     """

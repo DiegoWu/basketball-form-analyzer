@@ -3,39 +3,25 @@ DTW Similarity Calculator
 
 Performs DTW analysis between two sets of shooting features and calculates similarity scores.
 """
-
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 import warnings
 warnings.filterwarnings("ignore")
 
-# Import thresholds from config
+from dtaidistance import dtw
+DTW_AVAILABLE = True
+# Set random seed for deterministic results
+import random
+import numpy as np
+random.seed(42)
+np.random.seed(42)
 
-from shooting_comparison.config import *
-# print("DTW config values imported from shooting_comparison.config")
-
-# Try to import dtaidistance, fallback to alternative if not available
-try:
-    from dtaidistance import dtw
-    DTW_AVAILABLE = True
-    # Set random seed for deterministic results
-    import random
-    import numpy as np
-    random.seed(42)
-    np.random.seed(42)
-except ImportError:
-    DTW_AVAILABLE = False
-    print("Warning: dtaidistance not available, using fallback DTW implementation")
-
-try:
-    from scipy import signal
-    from scipy.spatial.distance import euclidean
-    SCIPY_AVAILABLE = True
-except ImportError:
-    SCIPY_AVAILABLE = False
-    print("Warning: scipy not available, using fallback implementations for global motion analysis")
+from scipy import signal
+SCIPY_AVAILABLE = True
 
 from .dtw_config import DTW_CONSTRAINTS, SIMILARITY_CONVERSION, SUBFEATURE_WEIGHTS
+from shooting_comparison.config import *
+
 
 class DTWSimilarityCalculator:
     """

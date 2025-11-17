@@ -7,8 +7,7 @@ Focuses on leg kinematics, upper body dynamics, and timing patterns during Loadi
 
 import numpy as np
 from typing import Dict, List, Tuple, Optional
-import sys
-import os
+
 
 # Add parent directory to path to import SafeCoordinateMixin
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
