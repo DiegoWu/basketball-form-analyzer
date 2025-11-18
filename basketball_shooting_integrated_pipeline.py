@@ -108,7 +108,7 @@ class BasketballShootingIntegratedPipeline:
             print("\n🎨 STEP 6: Generate visualization")
             print("-" * 30)
             
-            success = self.analyzer.generate_visualization(video_path, overwrite_mode)
+            success = self.analyzer.generate_original_visualization(video_path, overwrite_mode)
             if success:
                 print("✅ Visualization generated successfully")
             else:
@@ -222,8 +222,8 @@ class BasketballShootingIntegratedPipeline:
             print(f"🎬 Generating visualization: {os.path.basename(output_path)}")
             
             # Call the analyzer's visualization method
-            success = self.analyzer.generate_visualization(video_path, overwrite_mode)
-            
+            success = self.analyzer.generate_original_visualization(video_path, overwrite_mode)
+        
             if success:
                 # Move file to correct location with FPS in filename
                 old_output_path = os.path.join("data", "visualized_video", f"{base_name}_analyzed.avi")

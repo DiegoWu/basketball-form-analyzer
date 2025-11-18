@@ -1877,6 +1877,44 @@ class BasketballShootingAnalyzer:
         except Exception as e:
             print(f"❌ Save failed: {e}")
     
+    def generate_original_visualization(self, video_path: str, overwrite_mode: bool = False) -> bool:
+        """Generate original data visualization video (non-dual version)"""
+        base_name = os.path.splitext(os.path.basename(video_path))[0]
+        
+        # Check for existing original video file
+        original_output = os.path.join(self.visualized_video_dir, f"{base_name}_original_analyzed.mp4")
+        
+        if os.path.exists(original_output) and not overwrite_mode:
+            print(f"\n⚠️ Existing original visualization video found:")
+            print(f"  - {os.path.basename(original_output)}")
+            choice = input("Overwrite? (y/n): ").strip().lower()
+            if choice != 'y':
+                print("Keeping existing original visualization video.")
+                return True
+        
+        try:
+            # Load data
+            original_pose_data = self.pose_data
+            original_ball_data = self.ball_data
+            original_rim_data = self.rim_data
+            
+            # Generate original visualization
+            print("\n🎬 Generating original data visualization...")
+            self.create_original_analysis_video(
+                video_path=video_path,
+                output_path=original_output,
+                original_pose_data=original_pose_data,
+                original_ball_data=original_ball_data,
+                original_rim_data=original_rim_data,
+                shooting_phases=self.phases
+            )
+            print(f"✅ Original visualization: {os.path.basename(original_output)}")
+            
+            return True
+        except Exception as e:
+            print(f"❌ Failed to generate original visualization video: {e}")
+            return False
+
     def generate_visualization(self, video_path: str, overwrite_mode: bool = False) -> bool:
         """Generate dual visualization video (left: original, right: normalized)"""
         base_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -2058,14 +2096,14 @@ class BasketballShootingAnalyzer:
                     frame = self._draw_ball_original(frame, frame_count, original_ball_data)
                     frame = self._draw_rim_original(frame, frame_count, original_rim_data)
     
-                if shooting_phases and frame_count < len(shooting_phases):
-                    frame = self._draw_phase_label(frame, frame_count, "Original", shooting_phases)
+                # if shooting_phases and frame_count < len(shooting_phases):
+                    # frame = self._draw_phase_label(frame, frame_count, "Original", shooting_phases)
                 
                 # Add selected hand label
                 frame = self._draw_selected_hand_label(frame, self.selected_hand, self.selected_hand_confidence)
                 
                 # Add shot information label
-                frame = self._draw_shot_info_label(frame, frame_count)
+                # frame = self._draw_shot_info_label(frame, frame_count)
                 
                 out.write(frame)
                 frame_count += 1
@@ -2739,7 +2777,7 @@ class BasketballShootingAnalyzer:
         self.save_results(video_path, overwrite_mode)
         
         # STEP 5: Visualize (optional)
-        self.generate_visualization(video_path, overwrite_mode)
+        self.generate_original_visualization(video_path, overwrite_mode)
         
         print("\n✅ Analysis completed!")
         print("=" * 60)

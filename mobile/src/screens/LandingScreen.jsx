@@ -7,9 +7,9 @@ const LandingScreen = ({ navigation }) => {
     navigation.navigate('PlayerSelection');
   };
 
-  const handleBasicAnalysis = () => {
-    navigation.navigate('Main');
-  };
+  // const handleBasicAnalysis = () => {
+  //   navigation.navigate('Main');
+  // };
 
   const handleAutoComparison = () => {
     navigation.navigate('Main', { autoCompare: true });

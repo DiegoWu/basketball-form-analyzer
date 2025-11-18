@@ -12,7 +12,7 @@ const CameraScreen = ({navigation, route}) => {
   const [cameraPosition, setCameraPosition] = useState('back');
   const device = useCameraDevice(cameraPosition);
 
-  const [hasPermission, setHasPermission] = useState(true);
+  // const [hasPermission, setHasPermission] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
@@ -230,15 +230,12 @@ const CameraScreen = ({navigation, route}) => {
       });
 
       const result = await response.json();
-      if (autoCompare && result?.selectedPlayer) {
-        setSelectedPlayer(result.selectedPlayer);
-      }
-    
+  
       console.log('Upload successful:', result);
       
       navigation.navigate('Results', {
         analysisResult: result,
-        selectedPlayer: selectedPlayer,
+        selectedPlayer: result?.selectedPlayer,
       });
     } catch (error) {
       console.error('Upload failed:', error);

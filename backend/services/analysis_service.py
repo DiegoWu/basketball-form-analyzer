@@ -9,9 +9,11 @@ from shooting_comparison.analysis_interpreter import AnalysisInterpreter
 from shooting_comparison.enhanced_pipeline import EnhancedShootingComparisonPipeline
 from backend.routes.llm_routes import LLMService
 from backend.config import PLAYER_IDS, PLAYERS
+import json
 
 from basketball_shooting_integrated_pipeline import BasketballShootingIntegratedPipeline
 ANALYSIS_AVAILABLE = True 
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def clean_floats(obj):
     if isinstance(obj, dict):
@@ -87,6 +89,28 @@ def mock_compare_with_player(user_data: Dict, player_id: str) -> Dict:
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
+def user_video_replay(video_path: str):
+    normalized_json_path = os.path.abspath(os.path.join(CURRENT_DIR, "../../data/results/", os.path.basename(video_path).replace('.mp4', '_normalized_output.json')))
+    analyzed_video_path = f"/data/visualized_video/{os.path.basename(video_path).replace('.mp4', '_original_analyzed.mp4')}"
+    try:
+        with open(normalized_json_path, 'r', encoding='utf-8') as f:
+            normalized_data = json.load(f)
+            frames = normalized_data.get('frames', [])
+            data = [
+                {
+                    "frame_index": frame["frame_index"],
+                    "phase": frame["phase"],
+                    "shot": frame["shot"]
+                }
+                for frame in frames
+            ]
+            return {
+                "normalized_data": data,
+                "analyzed_video_path": analyzed_video_path
+            }
+    except Exception as e:
+        print(f"Error loading normalized data: {e}")
+    
 def compare_with_player_service(video: UploadFile, player_id: str, player_style: str):
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
@@ -95,9 +119,15 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
 
         if ANALYSIS_AVAILABLE:
             pipeline = BasketballShootingIntegratedPipeline()
-            user_result = pipeline.run_full_pipeline(video_path, overwrite_mode=True, use_existing_extraction=False)
+            success = pipeline.run_full_pipeline(video_path, overwrite_mode=True, use_existing_extraction=False)
+            if success:
+                data = user_video_replay(video_path)
+                normalized_data = data.get("normalized_data", [])
+                analyzed_video_path = data.get("analyzed_video_path", "")
+
         else:
             user_result = mock_analyze_video(video_path)
+
         print("debug: User video analyzed")
         enhanced_pipeline = EnhancedShootingComparisonPipeline()
         synthetic_base_path = f"output_dir/{player_id.lower()}"
@@ -107,18 +137,15 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
         os.unlink(video_path)
         print("debug: Comparison result obtained")
         interpretation = comparison_result.get("interpretation", "No interpretation available")
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        output_dir = os.path.abspath(os.path.join(current_dir, "../../shooting_comparison/results"))
+        output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../shooting_comparison/results"))
+
         interpreter = AnalysisInterpreter()
         llm_prompt = interpreter.generate_llm_prompt(interpretation)
         prompt_file_name = f"llm_prompt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         prompt_path = os.path.join(output_dir, prompt_file_name)
-        print("debug: Saving LLM prompt to", prompt_path)
-        try:
-            with open(prompt_path, 'w', encoding='utf-8') as f:
+
+        with open(prompt_path, 'w', encoding='utf-8') as f:
                 f.write(llm_prompt)
-        except Exception as e:
-            print(f"   Error saving LLM prompt: {e}")
 
         print("debug: Initializing LLMService with prompt path", prompt_path)
         llm_service = LLMService(prompt_path)
@@ -133,11 +160,16 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
         results = {
             "comparison_result": comparison_result,
             "llm_response": llm_response,
-            "image_path": image_path
+            "image_path": image_path,
+            "normalized_data": normalized_data,
+            "selectedPlayer": PLAYERS.get(player_id, {}),
+            "analyzed_video_path": analyzed_video_path,
         }
+        print("[DEBUG]: analyzed video path: ", analyzed_video_path)
         print("debug: Final results prepared")
         results = clean_floats(results)
         return results
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
 
@@ -149,7 +181,11 @@ def auto_compare_service(video: UploadFile):
 
         if ANALYSIS_AVAILABLE:
             pipeline = BasketballShootingIntegratedPipeline()
-            user_result = pipeline.run_full_pipeline(video_path, overwrite_mode=True, use_existing_extraction=False)
+            success = pipeline.run_full_pipeline(video_path, overwrite_mode=True, use_existing_extraction=False)
+            if success:
+                data = user_video_replay(video_path)
+                normalized_data = data.get("normalized_data", [])
+                analyzed_video_path = data.get("analyzed_video_path", "")
         else:
             user_result = mock_analyze_video(video_path)
         print("debug: User video analyzed")
@@ -168,8 +204,7 @@ def auto_compare_service(video: UploadFile):
             print("debug: Comparison result obtained")
             interpretation = comparison_result.get("interpretation", "No interpretation available")
 
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            output_dir = os.path.abspath(os.path.join(current_dir, "../../shooting_comparison/results"))
+            output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../shooting_comparison/results"))
             dtw_analysis = comparison_result.get("dtw_analysis", {})
             overall_score = dtw_analysis.get("overall_similarity", 0)
             if overall_score > best_overall_score:
@@ -205,9 +240,12 @@ def auto_compare_service(video: UploadFile):
             "comparison_result": best_comparison_result,
             "llm_response": llm_response,
             "image_path": image_path,
-            "selectedPlayer": PLAYERS.get(best_player_id, {})
+            "selectedPlayer": PLAYERS.get(best_player_id, {}),
+            "analyzed_video_path": analyzed_video_path,
+            "normalized_data": normalized_data,
         }
         print("debug: Final results prepared")
+
         results = clean_floats(results)
         return results
     except Exception as e:

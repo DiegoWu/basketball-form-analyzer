@@ -12,7 +12,7 @@ import sys
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 # from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -20,9 +20,7 @@ import uvicorn
 from fastapi.staticfiles import StaticFiles
 
 from backend.services.analysis_service import compare_with_player_service, auto_compare_service
-from backend.services.twilio_service import send_sms
 
-from fastapi import FastAPI, HTTPException, Request
 from backend.services.twilio_service import send_sms
 
 app = FastAPI(
@@ -32,7 +30,9 @@ app = FastAPI(
 )
 
 results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../shooting_comparison/results"))
+visualized_video_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/visualized_video"))
 app.mount("/results", StaticFiles(directory=results_dir), name="results")
+app.mount("/data/visualized_video", StaticFiles(directory=str(visualized_video_dir)), name="visualized_video")
 
 # # Configure CORS
 # app.add_middleware(
@@ -47,9 +47,9 @@ app.mount("/results", StaticFiles(directory=results_dir), name="results")
 # # app.include_router(model_router, prefix="/api", tags=["Model Routes"])
 # app.include_router(llm_routes.llm_router, prefix="/llm", tags=["LLM Routes"])
 
-@app.post("/analysis/analyze-video")
-async def analyze_video(video: UploadFile = File(...)):
-    return JSONResponse(content=analyze_video_service(video))
+# @app.post("/analysis/analyze-video")
+# async def analyze_video(video: UploadFile = File(...)):
+#     return JSONResponse(content=analyze_video_service(video))
 
 @app.post("/analysis/compare-with-player")
 async def compare_with_player(

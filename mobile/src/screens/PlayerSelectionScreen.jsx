@@ -7,6 +7,7 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  Image,
 } from 'react-native';
 import { CONFIG } from '../utils/config';
 
@@ -35,13 +36,21 @@ const PlayerSelectionScreen = ({ navigation }) => {
         onPress={() => handlePlayerSelect(player)}
       >
         <View style={styles.playerImageContainer}>
-          <View style={styles.playerImagePlaceholder}>
-            <Text style={styles.playerInitials}>
-              {player.name.split(' ').map(n => n[0]).join('')}
-            </Text>
-          </View>
+          {player.image ? (
+            <Image
+              source={player.image}
+              style={styles.playerImage}
+              resizeMode="cover"
+            />
+          ) : (
+            // Fallback to initials if no image
+            <View style={styles.playerImagePlaceholder}>
+              <Text style={styles.playerInitials}>
+                {player.name.split(' ').map(n => n[0]).join('')}
+              </Text>
+            </View>
+          )}
         </View>
-        
         <View style={styles.playerInfo}>
           <Text style={[styles.playerName, isSelected && styles.selectedPlayerName]}>
             {player.name}
@@ -171,6 +180,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 4,
+  },
+  playerImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#007AFF',
   },
   selectedPlayerName: {
     color: '#007AFF',

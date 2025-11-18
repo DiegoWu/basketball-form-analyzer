@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
-  Modal,
   Image,
 } from 'react-native';
 import { CONFIG, getSimilarityColor, getSimilarityLabel } from '../utils/config';
 import DetailedAnalysisScreen from './DetailedAnalysisScreen';
 const { width, height } = Dimensions.get('window');
 import { initializeTtsListeners, playTTS } from '../utils/ttsListener';
+import Video from 'react-native-video';
 
 import axios from 'axios';
 
@@ -28,9 +28,7 @@ const sendTwilioMessage = async (body, to) => {
 
 const ResultsScreen = ({ navigation, route }) => {
   const { analysisResult, selectedPlayer } = route.params || {};
-  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
-  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
-  const [currentImagePath, setCurrentImagePath] = useState('');
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'image', 'analysis', 'replay'
   const [screenDimensions, setScreenDimensions] = useState({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height
@@ -50,17 +48,14 @@ const ResultsScreen = ({ navigation, route }) => {
   const isFormDetected = () => {
     if (!analysisResult) return false;
     
-    // Check for error messages
     if (analysisResult.error || analysisResult.status === 'error') {
       return false;
     }
     
-    // Check if comparison result exists
     if (!analysisResult.comparison_result) {
       return false;
     }
     
-    // Check if DTW analysis exists and has valid data
     const dtwAnalysis = analysisResult.comparison_result?.dtw_analysis;
     if (!dtwAnalysis || !dtwAnalysis.overall_similarity) {
       return false;
@@ -73,7 +68,7 @@ const ResultsScreen = ({ navigation, route }) => {
     initializeTtsListeners();
     
     if (isFormDetected()) {
-      handleSendSms();
+      // handleSendSms();
       setTimeout(() => {
         playTTS(analysisResult?.llm_response); 
       }, 3000);
@@ -132,8 +127,9 @@ const ResultsScreen = ({ navigation, route }) => {
   };
 
   const renderPlayerComparison = () => {
+    console.log("route.params", route.params)
+
     if (!selectedPlayer) return null;
-    
     return (
       <View style={styles.playerComparisonContainer}>
         <Text style={styles.playerComparisonTitle}>
@@ -171,12 +167,6 @@ const ResultsScreen = ({ navigation, route }) => {
     );
   };
 
-  const openImageViewer = (imagePath) => {
-    setCurrentImagePath(imagePath);
-    setIsImageModalVisible(true);
-  };
-
-  // Render error state when shooting form is not detected
   const renderErrorState = () => {
     const errorMessage = analysisResult?.error || analysisResult?.message || "Shooting form not detected";
     
@@ -261,13 +251,41 @@ const ResultsScreen = ({ navigation, route }) => {
     );
   };
 
-  // Check if form was detected, if not show error state
-  if (!isFormDetected()) {
-    return renderErrorState();
-  }
-    
-  return (
-    <SafeAreaView style={styles.container}>
+  const renderTabBar = () => {
+    const tabs = [
+      { id: 'overview', label: 'Overview' },
+      { id: 'image', label: 'Shot Image' },
+      { id: 'analysis', label: 'Analysis' },
+      { id: 'replay', label: 'Replay' },
+    ];
+
+    return (
+      <View style={styles.tabBar}>
+        {tabs.map(tab => (
+          <TouchableOpacity
+            key={tab.id}
+            style={[
+              styles.tab,
+              activeTab === tab.id && styles.activeTab
+            ]}
+            onPress={() => setActiveTab(tab.id)}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === tab.id && styles.activeTabText
+            ]}>
+              {tab.label}
+            </Text>
+            {activeTab === tab.id && <View style={styles.activeTabIndicator} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
+
+  const renderOverviewTab = () => {
+    return (
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Analysis Results</Text>
@@ -285,29 +303,18 @@ const ResultsScreen = ({ navigation, route }) => {
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => openImageViewer(analysisResult?.image_path)}
-          >
-            <Text style={styles.actionButtonText}>View Shot Image</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setIsDetailModalVisible(true)}
-          >
-            <Text style={styles.actionButtonText}>View Detailed Analysis</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
             onPress={() => navigation.navigate('PlayerSelection')}
           >
             <Text style={styles.actionButtonText}>Try Another Player</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('Main', { autoCompare: true })}
           >
             <Text style={styles.actionButtonText}>New Auto Select</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity
             style={[styles.actionButton, styles.secondaryButton]}
             onPress={() => navigation.navigate('Main')}
@@ -329,82 +336,97 @@ const ResultsScreen = ({ navigation, route }) => {
           )}
         </View>
       </ScrollView>
+    );
+  };
 
-      {/* Detail Screen Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isDetailModalVisible}
-        onRequestClose={() => setIsDetailModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Detailed Analysis</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setIsDetailModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-            <DetailedAnalysisScreen
-              detailedResult={analysisResult} 
-              selectedPlayer={selectedPlayer}
+  const renderImageTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        <ScrollView
+          style={styles.imageScrollContainer}
+          contentContainerStyle={styles.imageContentContainer}
+          maximumZoomScale={5}
+          minimumZoomScale={1}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          pinchGestureEnabled={true}
+          scrollEnabled={true}
+        >
+          {analysisResult?.image_path ? (
+            <Image
+              source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analysisResult.image_path}` }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
             />
-          </View>
-        </View>
-      </Modal>
+          ) : (
+            <Text style={styles.noImageText}>No image to display</Text>
+          )}
+        </ScrollView>
+        <Text style={styles.imageHint}>Pinch to zoom, drag to move</Text>
+      </View>
+    );
+  };
 
-      {/* Image Viewer Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isImageModalVisible}
-        onRequestClose={() => setIsImageModalVisible(false)}
-        supportedOrientations={['portrait', 'landscape']}
-      >
-        <View style={styles.modalContainer}>
-          <View style={[
-            styles.imageModalContent, 
-            {
-              width: screenDimensions.width * 0.95,
-              height: screenDimensions.height * 0.85
-            }
-          ]}>
-            <View style={styles.compactModalHeader}>
-              <Text style={styles.compactModalTitle}>Pinch to zoom, drag to move</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setIsImageModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView
-              style={styles.imageScrollContainer}
-              contentContainerStyle={styles.imageContentContainer}
-              maximumZoomScale={5}
-              minimumZoomScale={1}
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-              pinchGestureEnabled={true}
-              scrollEnabled={true}
-            >
-              {currentImagePath ? (
-                <Image
-                  source={{ uri: `${CONFIG.BACKEND.BASE_URL}${currentImagePath}` }}
-                  style={styles.zoomableImage}
-                  resizeMode="contain"
-                />
-              ) : (
-                <Text style={styles.noImageText}>No image to display</Text>
-              )}
-            </ScrollView>
-          </View>
+  const renderAnalysisTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        <DetailedAnalysisScreen
+          detailedResult={analysisResult} 
+          selectedPlayer={selectedPlayer}
+        />
+      </View>
+    );
+  };
+
+  const renderReplayTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.replayContainer}>
+          <Video
+            source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analysisResult?.analyzed_video_path}` }}
+            style={styles.replayVideo}
+            controls={true}
+            resizeMode="contain"
+            paused={false}
+            repeat={true}
+          />
+          <TouchableOpacity
+            style={styles.fullScreenReplayButton}
+            onPress={() => navigation.navigate('VideoReplay', {
+              analyzedVideoPath: analysisResult?.analyzed_video_path,
+              normalizedData: analysisResult?.normalized_data,
+            })}
+          >
+            <Text style={styles.fullScreenReplayButtonText}>Open Full Screen Replay</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </View>
+    );
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return renderOverviewTab();
+      case 'image':
+        return renderImageTab();
+      case 'analysis':
+        return renderAnalysisTab();
+      case 'replay':
+        return renderReplayTab();
+      default:
+        return renderOverviewTab();
+    }
+  };
+
+  if (!isFormDetected()) {
+    return renderErrorState();
+  }
+    
+  return (
+    <SafeAreaView style={styles.container}>
+      {renderTabBar()}
+      {renderTabContent()}
     </SafeAreaView>
   );
 };
@@ -417,6 +439,118 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#1a1a1a',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    paddingHorizontal: 0,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  activeTab: {
+    backgroundColor: 'rgba(78, 205, 196, 0.05)',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#888',
+    textAlign: 'center',
+    paddingHorizontal: 4,
+  },
+  activeTabText: {
+    color: '#4ECDC4',
+    fontWeight: '700',
+  },
+  activeTabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#4ECDC4',
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  
+  // ✅ Tab Content Styles
+  tabContent: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  
+  imageScrollContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  imageContentContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: width,
+    height: height * 0.85,
+  },
+  noImageText: {
+    color: '#888',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  imageHint: {
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  
+  // ✅ Replay Tab Styles
+  replayContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  replayVideo: {
+    width: '100%',
+    height: height * 0.6,
+    backgroundColor: '#000',
+  },
+  fullScreenReplayButton: {
+    margin: 20,
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fullScreenReplayButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Original styles
   errorScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -678,82 +812,6 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 16,
     fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: width * 0.9,
-    height: height * 0.8,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  imageModalContent: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  compactModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 8,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  compactModalTitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: '500',
-  },
-  imageScrollContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  imageContentContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  zoomableImage: {
-    width: width * 0.95,
-    height: height * 0.8,
-    resizeMode: 'contain',
-  },
-  noImageText: {
-    color: '#888',
-    fontSize: 16,
-    fontWeight: '500',
   },
 });
 
