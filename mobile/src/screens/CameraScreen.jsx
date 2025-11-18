@@ -1,12 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Dimensions, Pressable} from 'react-native';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { CONFIG, getApiUrl } from '../utils/config';
 import { launchImageLibrary } from 'react-native-image-picker';
+import InstructionsOverlay from '../components/InstructionsOverlay';
 
 const CameraScreen = ({navigation, route}) => {
-  var { selectedPlayer } = route.params || {};
+  const [selectedPlayer, setSelectedPlayer] = useState(route.params?.selectedPlayer || null);
   const cameraRef = useRef(null);
   const [cameraPosition, setCameraPosition] = useState('back');
   const device = useCameraDevice(cameraPosition);
@@ -15,7 +16,6 @@ const CameraScreen = ({navigation, route}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
-  const { autoCompare } = route.params || {};
   
   // Zoom state
   const [zoom, setZoom] = useState(1);
@@ -28,6 +28,18 @@ const CameraScreen = ({navigation, route}) => {
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
 
+  const [autoCompare, setAutoCompare] = useState(false);
+  
+  const [focusPoint, setFocusPoint] = useState(null);
+  const focusAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (route?.params?.autoCompare === true) {
+      setAutoCompare(true);
+      console.log('AutoCompare enabled via route params');
+    }
+  }, [route?.params?.autoCompare]);
+  
   // Auto-hide instructions after 8 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -69,6 +81,45 @@ const CameraScreen = ({navigation, route}) => {
     const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
     return () => subscription?.remove();
   }, []);
+
+  const handleTapToFocus = async (event) => {
+    if (!cameraRef.current || isRecording || processing) return;
+
+    try {
+      const { locationX, locationY } = event.nativeEvent;
+      const { width, height } = screenDimensions;
+
+      // Convert screen coordinates to normalized coordinates (0-1)
+      const x = locationX / width;
+      const y = locationY / height;
+
+      // Focus the camera at the tapped point
+      await cameraRef.current.focus({ x, y });
+
+      // Show focus indicator animation
+      setFocusPoint({ x: locationX, y: locationY });
+      
+      // Animate focus indicator
+      focusAnimation.setValue(0);
+      Animated.sequence([
+        Animated.timing(focusAnimation, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1000),
+        Animated.timing(focusAnimation, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setFocusPoint(null));
+
+      console.log(`Focused at: x=${x.toFixed(2)}, y=${y.toFixed(2)}`);
+    } catch (error) {
+      console.error('Focus error:', error);
+    }
+  };
 
   // Pinch gesture for zoom
   const pinchGesture = Gesture.Pinch()
@@ -167,7 +218,7 @@ const CameraScreen = ({navigation, route}) => {
       const endpoint = autoCompare 
         ? CONFIG.BACKEND.ENDPOINTS.AUTO_MATCH_WITH_PLAYER : selectedPlayer 
         ? CONFIG.BACKEND.ENDPOINTS.COMPARE_WITH_PLAYER
-        : CONFIG.BACKEND.ENDPOINTS.ANALYZE_VIDEO;
+        : CONFIG.BACKEND.ENDPOINTS.AUTO_MATCH_WITH_PLAYER;
 
       const response = await fetch(getApiUrl(endpoint), {
         method: 'POST',
@@ -179,7 +230,9 @@ const CameraScreen = ({navigation, route}) => {
       });
 
       const result = await response.json();
-      if(autoCompare) selectedPlayer = result?.selectedPlayer;
+      if (autoCompare && result?.selectedPlayer) {
+        setSelectedPlayer(result.selectedPlayer);
+      }
     
       console.log('Upload successful:', result);
       
@@ -234,17 +287,52 @@ const CameraScreen = ({navigation, route}) => {
       {/* Interaction-blocking overlay */}
       {processing && <View style={styles.interactionBlocker} />}
 
-      <GestureDetector gesture={pinchGesture}>
-        <Camera
-          ref={cameraRef}
-          style={StyleSheet.absoluteFill}
-          device={device}
-          isActive={true}
-          video={true}
-          audio={false}
-          zoom={zoom}
-        />
-      </GestureDetector>
+      <Pressable 
+        style={StyleSheet.absoluteFill}
+        onPress={handleTapToFocus}
+        disabled={isRecording || processing || showInstructions}
+      >
+        <GestureDetector gesture={pinchGesture}>
+          <Camera
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            device={device}
+            isActive={true}
+            video={true}
+            audio={false}
+            zoom={zoom}
+          />
+        </GestureDetector>
+      </Pressable>
+
+      {/* ← Focus Indicator */}
+      {focusPoint && (
+        <Animated.View
+          style={[
+            styles.focusIndicator,
+            {
+              left: focusPoint.x - 40,
+              top: focusPoint.y - 40,
+              opacity: focusAnimation,
+              transform: [
+                {
+                  scale: focusAnimation.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [1.5, 0.8, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.focusBox}>
+            <View style={styles.focusCorner} />
+            <View style={[styles.focusCorner, styles.focusCornerTopRight]} />
+            <View style={[styles.focusCorner, styles.focusCornerBottomLeft]} />
+            <View style={[styles.focusCorner, styles.focusCornerBottomRight]} />
+          </View>
+        </Animated.View>
+      )}
 
       {/* Zoom Controls */}
       {!showInstructions && !processing && (
@@ -291,90 +379,12 @@ const CameraScreen = ({navigation, route}) => {
       )}
 
       {/* Glassy Instructions Overlay */}
-      {showInstructions && (
-        <Animated.View style={[styles.instructionsOverlay, { opacity: fadeAnim }]}>
-          <View style={styles.glassContainer}>
-            <View style={styles.headerContainer}>
-              <Text style={styles.instructionsTitle}>Recording Tips</Text>
-            </View>
-            
-            <Text style={styles.instructionsSubtitle}>
-              Follow these guidelines for best results
-            </Text>
-
-            <View style={styles.instructionsList}>
-              <View style={styles.instructionItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>1</Text>
-                </View>
-                <View style={styles.instructionTextContainer}>
-                  <Text style={styles.instructionTitle}>Side View Position</Text>
-                  <Text style={styles.instructionText}>
-                    Stand perpendicular to the camera
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.instructionItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>2</Text>
-                </View>
-                <View style={styles.instructionTextContainer}>
-                  <Text style={styles.instructionTitle}>Ball Visibility</Text>
-                  <Text style={styles.instructionText}>
-                    Keep basketball in frame at all times
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.instructionItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>3</Text>
-                </View>
-                <View style={styles.instructionTextContainer}>
-                  <Text style={styles.instructionTitle}>Proper Distance</Text>
-                  <Text style={styles.instructionText}>
-                    Stand 10-15 feet away from camera
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.instructionItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>4</Text>
-                </View>
-                <View style={styles.instructionTextContainer}>
-                  <Text style={styles.instructionTitle}>Full Body Frame</Text>
-                  <Text style={styles.instructionText}>
-                    Ensure entire body is visible
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.instructionItem}>
-                <View style={styles.numberCircle}>
-                  <Text style={styles.numberText}>5</Text>
-                </View>
-                <View style={styles.instructionTextContainer}>
-                  <Text style={styles.instructionTitle}>Good Lighting</Text>
-                  <Text style={styles.instructionText}>
-                    Avoid shadows and backlighting
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <TouchableOpacity 
-                style={styles.dismissButton}
-                onPress={toggleInstructions}
-              >
-                <Text style={styles.dismissButtonText}>Got it! Let's Start</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-        </Animated.View>
-      )}
+      <InstructionsOverlay
+        visible={showInstructions}
+        fadeAnim={fadeAnim}
+        pulseAnim={pulseAnim}
+        onDismiss={toggleInstructions}
+      />
 
       {/* Help Button */}
       {!showInstructions && !isRecording && (
@@ -523,107 +533,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.9,
   },
-  instructionsOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    zIndex: 10,
-  },
-  glassContainer: {
-    backgroundColor: 'rgba(30, 30, 30, 0.95)',
-    borderRadius: 24,
-    padding: 28,
-    marginHorizontal: 24,
-    borderWidth: 2,
-    borderColor: 'rgba(78, 205, 196, 0.4)',
-    shadowColor: '#4ECDC4',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 15,
-    maxWidth: 400,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  instructionsTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  instructionsSubtitle: {
-    fontSize: 15,
-    color: '#AAAAAA',
-    textAlign: 'center',
-    marginBottom: 24,
-    fontStyle: 'italic',
-  },
-  instructionsList: {
-    marginBottom: 20,
-  },
-  instructionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 18,
-    backgroundColor: 'rgba(78, 205, 196, 0.08)',
-    padding: 12,
-    borderRadius: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#4ECDC4',
-  },
-  numberCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  numberText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4ECDC4',
-  },
-  instructionTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  instructionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 3,
-  },
-  instructionText: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    lineHeight: 19,
-  },
-  dismissButton: {
-    backgroundColor: '#4ECDC4',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    alignItems: 'center',
-    shadowColor: '#4ECDC4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  dismissButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
+
   helpButton: {
     position: 'absolute',
     top: 60,
@@ -793,6 +703,48 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent', // Transparent to maintain visibility
     zIndex: 1000, // Ensure it is above all other elements
+  },
+  focusIndicator: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    zIndex: 50,
+    pointerEvents: 'none',
+  },
+  focusBox: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#4ECDC4',
+    borderRadius: 4,
+  },
+  focusCorner: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderColor: '#4ECDC4',
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    top: -2,
+    left: -2,
+  },
+  focusCornerTopRight: {
+    transform: [{ rotate: '90deg' }],
+    top: -2,
+    right: -2,
+    left: undefined,
+  },
+  focusCornerBottomLeft: {
+    transform: [{ rotate: '270deg' }],
+    bottom: -2,
+    top: undefined,
+    left: -2,
+  },
+  focusCornerBottomRight: {
+    transform: [{ rotate: '180deg' }],
+    bottom: -2,
+    right: -2,
+    top: undefined,
+    left: undefined,
   },
 });
 
