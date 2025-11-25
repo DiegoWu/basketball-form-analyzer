@@ -32,11 +32,17 @@ class DTWVisualizer:
     def __init__(self):
         self.fig_size = (12, 8)
         self.colors = {
-            'video1': '#2E86AB',
-            'video2': '#A23B72', 
-            'alignment': '#F18F01',
+            'video1': '#4ECDC4',      # Bright cyan for user
+            'video2': '#FF6B6B',      # Bright coral for pro player
+            'alignment': '#FFA500',   # Orange for alignment lines
             'similarity_high': '#43AA8B',
-            'similarity_low': '#F8333C'
+            'similarity_low': '#F8333C',
+            'grid': '#2a2a2a',        # Dark gray for grid
+            'text': '#ffffff',        # White text
+            'background': '#0a0a0a',  # Very dark background
+            'plot_bg': '#1a1a1a',     # Slightly lighter plot background
+            'reference_line': '#90EE90',  # Light green for reference lines
+            'fill': '#3a3a3a'         # Dark gray for fills
         }
         # data_path = "data/extracted_data/"
         # self.normalized_data_path1 = data_path + os.path.basename(video1_path) if video1_path else None
@@ -44,10 +50,327 @@ class DTWVisualizer:
         self.matplotlib_available = MATPLOTLIB_AVAILABLE
          
         if not self.matplotlib_available:
-            print("⚠️ DTWVisualizer: matplotlib not available, visualizations disabled")
+            print("DTWVisualizer: matplotlib not available, visualizations disabled")
+
+    def _setup_dark_style(self, ax, fig=None):
+        """Apply professional dark theme to plot"""
+        # Set figure background if provided
+        if fig:
+            fig.patch.set_facecolor(self.colors['background'])
         
-   
-   
+        # Set axes background
+        ax.set_facecolor(self.colors['plot_bg'])
+        
+        # Style axes
+        ax.spines['bottom'].set_color(self.colors['grid'])
+        ax.spines['top'].set_color(self.colors['grid'])
+        ax.spines['left'].set_color(self.colors['grid'])
+        ax.spines['right'].set_color(self.colors['grid'])
+        
+        # Style ticks
+        ax.tick_params(colors=self.colors['text'], which='both')
+        
+        # Style labels
+        ax.xaxis.label.set_color(self.colors['text'])
+        ax.yaxis.label.set_color(self.colors['text'])
+        ax.title.set_color(self.colors['text'])
+        
+        # Grid styling
+        ax.grid(True, alpha=0.15, color=self.colors['grid'], linestyle='-', linewidth=0.5)
+
+    def create_separate_trajectory_comparison_plot(self, dtw_results: Dict, video1_data: Dict, 
+                                    video2_data: Dict, save_path: str = None) -> Dict[str, str]:
+        """
+        Create detailed trajectory comparison plots as separate images.
+        """
+        # print(" Creating DTW trajectory comparison plots...")
+        
+        # Determine save directory
+        if not save_path:
+            save_dir = "shooting_comparison/results"
+        else:
+            save_dir = os.path.dirname(save_path)
+        
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Dictionary to store all generated plot paths
+        plot_paths = {}
+        
+        #Set dark style globally for matplotlib
+        plt.style.use('dark_background')
+        
+        # 1. Ball Trajectory Plot
+        # print("    Creating ball trajectory plot...")
+        fig, ax = plt.subplots(figsize=(12, 9), facecolor=self.colors['background'])
+        self._setup_dark_style(ax, fig)
+        self._plot_ball_trajectory_comparison(ax, dtw_results, video1_data, video2_data)
+        ball_path = os.path.join(save_dir, "ball_trajectory.png")
+        plt.tight_layout()
+        plt.savefig(ball_path, dpi=300, bbox_inches='tight', facecolor=self.colors['background'], edgecolor='none')
+        plt.close()
+        plot_paths['ball_trajectory'] = ball_path
+        # print(f" Saved: {ball_path}")
+        
+        # 2. Wrist Trajectory Plot
+        # print("Creating wrist trajectory plot...")
+        fig, ax = plt.subplots(figsize=(12, 9), facecolor=self.colors['background'])
+        self._setup_dark_style(ax, fig)
+        self._plot_wrist_trajectory_comparison(ax, dtw_results, video1_data, video2_data)
+        wrist_path = os.path.join(save_dir, "wrist_trajectory.png")
+        plt.tight_layout()
+        plt.savefig(wrist_path, dpi=300, bbox_inches='tight', facecolor=self.colors['background'], edgecolor='none')
+        plt.close()
+        plot_paths['wrist_trajectory'] = wrist_path
+        # print(f"  Saved: {wrist_path}")
+        
+        # 3. Elbow Angle Plot
+        # print("  Creating elbow angle plot...")
+        fig, ax = plt.subplots(figsize=(12, 9), facecolor=self.colors['background'])
+        self._setup_dark_style(ax, fig)
+        self._plot_elbow_angle_comparison(ax, dtw_results, video1_data, video2_data)
+        elbow_path = os.path.join(save_dir, "elbow_angle.png")
+        plt.tight_layout()
+        plt.savefig(elbow_path, dpi=300, bbox_inches='tight', facecolor=self.colors['background'], edgecolor='none')
+        plt.close()
+        plot_paths['elbow_angle'] = elbow_path
+        # print(f"  Saved: {elbow_path}")
+        
+        # 4. Hip Stability Plot
+        # print("   Creating hip stability plot...")
+        fig, ax = plt.subplots(figsize=(12, 9), facecolor=self.colors['background'])
+        self._setup_dark_style(ax, fig)
+        self._plot_hip_stability_comparison(ax, dtw_results, video1_data, video2_data)
+        hip_path = os.path.join(save_dir, "hip_stability.png")
+        plt.tight_layout()
+        plt.savefig(hip_path, dpi=300, bbox_inches='tight', facecolor=self.colors['background'], edgecolor='none')
+        plt.close()
+        plot_paths['hip_stability'] = hip_path
+        # print(f"   Saved: {hip_path}")
+        
+        # print(f" Created {len(plot_paths)} DTW comparison plots in: {save_dir}")
+        
+        return plot_paths
+
+    # ... keep all your existing helper methods (_apply_dtw_to_trajectories, etc.) ...
+
+    def _plot_ball_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
+        """Plot ball trajectory comparison with DTW alignment (2D data)"""
+        ax.set_title("Ball Trajectory Comparison (DTW Aligned)", 
+                    fontsize=16, fontweight='bold', pad=20, color=self.colors['text'])
+        
+        # Extract actual ball trajectory data
+        ball1_trajectory = self._extract_ball_trajectory(video1_data)
+        ball2_trajectory = self._extract_ball_trajectory(video2_data)
+        
+        if ball1_trajectory and ball2_trajectory:
+            ball1_x, ball1_y = ball1_trajectory
+            ball2_x, ball2_y = ball2_trajectory
+            
+            # Apply DTW to 2D trajectory
+            distance, path = self._apply_dtw_to_trajectory_2d(ball1_x, ball1_y, ball2_x, ball2_y)
+            
+            # Create aligned trajectories using DTW path
+            if path:
+                aligned_ball1_x = [ball1_x[i] for i, j in path]
+                aligned_ball1_y = [ball1_y[i] for i, j in path]
+                aligned_ball2_x = [ball2_x[j] for i, j in path]
+                aligned_ball2_y = [ball2_y[j] for i, j in path]
+                
+                # Plot aligned trajectories with new colors
+                ax.plot(aligned_ball1_x, aligned_ball1_y, 
+                       color=self.colors['video1'], 
+                       linewidth=3, marker='o', markersize=4, 
+                       label='Your Shot', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                ax.plot(aligned_ball2_x, aligned_ball2_y, 
+                       color=self.colors['video2'], 
+                       linewidth=3, marker='s', markersize=4, 
+                       label='Pro Player', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                
+                #  Draw alignment connections with orange
+                step = max(1, len(path) // 10)
+                for i in range(0, len(path), step):
+                    idx1, idx2 = path[i]
+                    ax.plot([ball1_x[idx1], ball2_x[idx2]], [ball1_y[idx1], ball2_y[idx2]], 
+                           color=self.colors['alignment'], alpha=0.2, linewidth=1, linestyle=':')
+            
+            #  Mark start points with larger, more visible markers
+            ax.scatter(ball1_x[0], ball1_y[0], 
+                      color=self.colors['video1'], 
+                      s=200, marker='o', edgecolors='white', linewidths=2.5, zorder=5,
+                      label='Start (Your Shot)')
+            ax.scatter(ball2_x[0], ball2_y[0], 
+                      color=self.colors['video2'], 
+                      s=200, marker='s', edgecolors='white', linewidths=2.5, zorder=5,
+                      label='Start (Pro)')
+        else:
+            ax.text(0.5, 0.5, 'Ball trajectory data not available', 
+                   transform=ax.transAxes, ha='center', va='center', 
+                   fontsize=14, color=self.colors['text'])
+        
+        ax.set_xlabel("X Position (normalized)", fontsize=12, fontweight='600')
+        ax.set_ylabel("Y Position (normalized)", fontsize=12, fontweight='600')
+        ax.legend(loc='best', fontsize=10, framealpha=0.9, facecolor=self.colors['plot_bg'], edgecolor=self.colors['grid'])
+        ax.invert_yaxis()
+
+    def _plot_wrist_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
+        """Plot wrist trajectory comparison with DTW alignment (2D data)"""
+        ax.set_title("Wrist Trajectory Comparison (DTW Aligned)", 
+                    fontsize=16, fontweight='bold', pad=20, color=self.colors['text'])
+        
+        wrist1_trajectory = self._extract_wrist_trajectory(video1_data)
+        wrist2_trajectory = self._extract_wrist_trajectory(video2_data)
+        
+        if wrist1_trajectory and wrist2_trajectory:
+            wrist1_x, wrist1_y = wrist1_trajectory
+            wrist2_x, wrist2_y = wrist2_trajectory
+            
+            distance, path = self._apply_dtw_to_trajectory_2d(wrist1_x, wrist1_y, wrist2_x, wrist2_y)
+            
+            if path:
+                aligned_wrist1_x = [wrist1_x[i] for i, j in path]
+                aligned_wrist1_y = [wrist1_y[i] for i, j in path]
+                aligned_wrist2_x = [wrist2_x[j] for i, j in path]
+                aligned_wrist2_y = [wrist2_y[j] for i, j in path]
+                
+                ax.plot(aligned_wrist1_x, aligned_wrist1_y, 
+                       color=self.colors['video1'], 
+                       linewidth=3, marker='o', markersize=4, 
+                       label='Your Shot', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                ax.plot(aligned_wrist2_x, aligned_wrist2_y, 
+                       color=self.colors['video2'], 
+                       linewidth=3, marker='s', markersize=4, 
+                       label='Pro Player', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                
+                step = max(1, len(path) // 10)
+                for i in range(0, len(path), step):
+                    idx1, idx2 = path[i]
+                    ax.plot([wrist1_x[idx1], wrist2_x[idx2]], [wrist1_y[idx1], wrist2_y[idx2]], 
+                           color=self.colors['alignment'], alpha=0.2, linewidth=1, linestyle=':')
+            
+            ax.scatter(wrist1_x[0], wrist1_y[0], 
+                      color=self.colors['video1'], 
+                      s=200, marker='o', edgecolors='white', linewidths=2.5, zorder=5)
+            ax.scatter(wrist2_x[0], wrist2_y[0], 
+                      color=self.colors['video2'], 
+                      s=200, marker='s', edgecolors='white', linewidths=2.5, zorder=5)
+        else:
+            ax.text(0.5, 0.5, 'Wrist trajectory data not available', 
+                   transform=ax.transAxes, ha='center', va='center', 
+                   fontsize=14, color=self.colors['text'])
+        
+        ax.set_xlabel("X Position (normalized)", fontsize=12, fontweight='600')
+        ax.set_ylabel("Y Position (normalized)", fontsize=12, fontweight='600')
+        ax.legend(loc='best', fontsize=10, framealpha=0.9, facecolor=self.colors['plot_bg'], edgecolor=self.colors['grid'])
+        ax.invert_yaxis()
+
+    def _plot_elbow_angle_comparison(self, ax, dtw_results, video1_data, video2_data):
+        """Plot elbow angle comparison with DTW alignment (1D data)"""
+        ax.set_title("Elbow Angle Comparison (DTW Aligned)", 
+                    fontsize=16, fontweight='bold', pad=20, color=self.colors['text'])
+        
+        elbow1_angles = self._extract_elbow_angles(video1_data)
+        elbow2_angles = self._extract_elbow_angles(video2_data)
+        
+        if elbow1_angles and elbow2_angles:
+            distance, path = self._apply_dtw_to_trajectories(elbow1_angles, elbow2_angles)
+            
+            if path:
+                aligned_elbow1 = [elbow1_angles[i] for i, j in path]
+                aligned_elbow2 = [elbow2_angles[j] for i, j in path]
+                aligned_frames = range(len(aligned_elbow1))
+                
+                ax.plot(aligned_frames, aligned_elbow1, 
+                       color=self.colors['video1'], 
+                       linewidth=3, marker='o', markersize=4, 
+                       label='Your Shot', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                ax.plot(aligned_frames, aligned_elbow2, 
+                       color=self.colors['video2'], 
+                       linewidth=3, marker='s', markersize=4, 
+                       label='Pro Player', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                
+                #  Fill area between curves with semi-transparent color
+                ax.fill_between(aligned_frames, aligned_elbow1, aligned_elbow2, 
+                               alpha=0.15, color=self.colors['alignment'])
+            
+            #  Add reference lines with yellow-green color
+            ax.axhline(y=90, color=self.colors['reference_line'], 
+                      linestyle='--', alpha=0.5, linewidth=2, label='90° Reference')
+            ax.axhline(y=120, color='#FFEB3B',  # Yellow
+                      linestyle='--', alpha=0.5, linewidth=2, label='120° Reference')
+        else:
+            ax.text(0.5, 0.5, 'Elbow angle data not available', 
+                   transform=ax.transAxes, ha='center', va='center', 
+                   fontsize=14, color=self.colors['text'])
+
+        ax.set_xlabel("Frame (DTW Aligned)", fontsize=12, fontweight='600')
+        ax.set_ylabel("Elbow Angle (degrees)", fontsize=12, fontweight='600')
+        ax.set_ylim(0, 180)
+        ax.legend(loc='best', fontsize=10, framealpha=0.9, facecolor=self.colors['plot_bg'], edgecolor=self.colors['grid'])
+
+    def _plot_hip_stability_comparison(self, ax, dtw_results, video1_data, video2_data):
+        """Plot hip stability comparison with DTW alignment (1D data)"""
+        ax.set_title("Hip Stability Comparison (DTW Aligned)", 
+                    fontsize=16, fontweight='bold', pad=20, color=self.colors['text'])
+        
+        hip1_positions = self._extract_hip_positions(video1_data)
+        hip2_positions = self._extract_hip_positions(video2_data)
+        
+        if hip1_positions and hip2_positions:
+            distance, path = self._apply_dtw_to_trajectories(hip1_positions, hip2_positions)
+            
+            if path:
+                aligned_hip1 = [hip1_positions[i] for i, j in path]
+                aligned_hip2 = [hip2_positions[j] for i, j in path]
+                aligned_frames = range(len(aligned_hip1))
+                
+                ax.plot(aligned_frames, aligned_hip1, 
+                       color=self.colors['video1'], 
+                       linewidth=3, marker='o', markersize=4, 
+                       label='Your Shot', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                ax.plot(aligned_frames, aligned_hip2, 
+                       color=self.colors['video2'], 
+                       linewidth=3, marker='s', markersize=4, 
+                       label='Pro Player', alpha=0.9, markeredgewidth=0.5, markeredgecolor='white')
+                
+                ax.fill_between(aligned_frames, aligned_hip1, aligned_hip2, 
+                               alpha=0.15, color=self.colors['alignment'])
+
+            # Calculate stability metrics
+            hip1_std = np.std(hip1_positions)
+            hip2_std = np.std(hip2_positions)
+            more_stable = "Your Shot" if hip1_std < hip2_std else "Pro Player"
+
+            stability_text = (
+                f'Your Stability (σ): {hip1_std:.4f}\n'
+                f'Pro Stability (σ): {hip2_std:.4f}\n'
+                f'More Stable: {more_stable}'
+            )
+            
+            #  Style the text box
+            ax.text(0.02, 0.98, stability_text, 
+                   transform=ax.transAxes, fontsize=10, verticalalignment='top',
+                   bbox=dict(boxstyle='round,pad=0.8', facecolor=self.colors['plot_bg'], 
+                            alpha=0.95, edgecolor=self.colors['reference_line'], linewidth=2),
+                   color=self.colors['text'], fontweight='600')
+            
+            #  Add average position lines with green color
+            ax.axhline(y=np.mean(hip1_positions), 
+                      color=self.colors['video1'], 
+                      linestyle=':', alpha=0.4, linewidth=2)
+            ax.axhline(y=np.mean(hip2_positions), 
+                      color=self.colors['video2'], 
+                      linestyle=':', alpha=0.4, linewidth=2)
+        else:
+            ax.text(0.5, 0.5, 'Hip position data not available', 
+                   transform=ax.transAxes, ha='center', va='center', 
+                   fontsize=14, color=self.colors['text'])
+
+        ax.set_xlabel("Frame (DTW Aligned)", fontsize=12, fontweight='600')
+        ax.set_ylabel("Hip Position (normalized)", fontsize=12, fontweight='600')
+        ax.legend(loc='best', fontsize=10, framealpha=0.9, facecolor=self.colors['plot_bg'], edgecolor=self.colors['grid'])
+        ax.invert_yaxis()
+
+
     def create_trajectory_comparison_plot(self, dtw_results: Dict, video1_data: Dict, 
                                         video2_data: Dict, save_path: str = None) -> str:
         """
@@ -62,7 +385,7 @@ class DTWVisualizer:
         Returns:
             Path to saved plot
         """
-        print("🎨 Creating DTW trajectory comparison plot...")
+        # print(" Creating DTW trajectory comparison plot...")
         
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
         fig.suptitle('DTW Trajectory Comparison Analysis', fontsize=16, fontweight='bold')
@@ -83,7 +406,7 @@ class DTWVisualizer:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"✅ DTW trajectory comparison plot saved: {save_path}")
+        # print(f" DTW trajectory comparison plot saved: {save_path}")
         return save_path
     
     def _apply_dtw_to_trajectories(self, data1: List[float], data2: List[float]) -> Tuple[float, List[Tuple[int, int]]]:
@@ -190,250 +513,250 @@ class DTWVisualizer:
         dy = np.array(y1[:min_len]) - np.array(y2[:min_len])
         return np.sqrt(np.mean(dx**2 + dy**2))
 
-    def _plot_ball_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot ball trajectory comparison with DTW alignment (2D data)"""
-        ax.set_title("Ball Trajectory Comparison (DTW Aligned)")
+    # def _plot_ball_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
+    #     """Plot ball trajectory comparison with DTW alignment (2D data)"""
+    #     ax.set_title("Ball Trajectory Comparison (DTW Aligned)")
         
-        # Extract actual ball trajectory data
-        ball1_trajectory = self._extract_ball_trajectory(video1_data)
-        ball2_trajectory = self._extract_ball_trajectory(video2_data)
+    #     # Extract actual ball trajectory data
+    #     ball1_trajectory = self._extract_ball_trajectory(video1_data)
+    #     ball2_trajectory = self._extract_ball_trajectory(video2_data)
         
-        if ball1_trajectory and ball2_trajectory:
-            ball1_x, ball1_y = ball1_trajectory
-            ball2_x, ball2_y = ball2_trajectory
+    #     if ball1_trajectory and ball2_trajectory:
+    #         ball1_x, ball1_y = ball1_trajectory
+    #         ball2_x, ball2_y = ball2_trajectory
             
-            # Apply DTW to 2D trajectory (uses same path for both x and y)
-            distance, path = self._apply_dtw_to_trajectory_2d(ball1_x, ball1_y, ball2_x, ball2_y)
+    #         # Apply DTW to 2D trajectory (uses same path for both x and y)
+    #         distance, path = self._apply_dtw_to_trajectory_2d(ball1_x, ball1_y, ball2_x, ball2_y)
             
-            # Plot original trajectories with dashed lines
-            # ax.plot(ball1_x, ball1_y, color=self.colors['video1'], linewidth=1.5, 
-            #     marker='o', markersize=3, label='Video 1 Ball', alpha=0.5, linestyle='--')
-            # ax.plot(ball2_x, ball2_y, color=self.colors['video2'], linewidth=1.5, 
-            #     marker='s', markersize=3, label='Video 2 Ball', alpha=0.5, linestyle='--')
+    #         # Plot original trajectories with dashed lines
+    #         # ax.plot(ball1_x, ball1_y, color=self.colors['video1'], linewidth=1.5, 
+    #         #     marker='o', markersize=3, label='Video 1 Ball', alpha=0.5, linestyle='--')
+    #         # ax.plot(ball2_x, ball2_y, color=self.colors['video2'], linewidth=1.5, 
+    #         #     marker='s', markersize=3, label='Video 2 Ball', alpha=0.5, linestyle='--')
             
-            # Create aligned trajectories using DTW path
-            if path:
-                aligned_ball1_x = [ball1_x[i] for i, j in path]
-                aligned_ball1_y = [ball1_y[i] for i, j in path]
-                aligned_ball2_x = [ball2_x[j] for i, j in path]
-                aligned_ball2_y = [ball2_y[j] for i, j in path]
+    #         # Create aligned trajectories using DTW path
+    #         if path:
+    #             aligned_ball1_x = [ball1_x[i] for i, j in path]
+    #             aligned_ball1_y = [ball1_y[i] for i, j in path]
+    #             aligned_ball2_x = [ball2_x[j] for i, j in path]
+    #             aligned_ball2_y = [ball2_y[j] for i, j in path]
                 
-                # Plot aligned trajectories with solid lines
-                ax.plot(aligned_ball1_x, aligned_ball1_y, color=self.colors['video1'], 
-                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
-                ax.plot(aligned_ball2_x, aligned_ball2_y, color=self.colors['video2'], 
-                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+    #             # Plot aligned trajectories with solid lines
+    #             ax.plot(aligned_ball1_x, aligned_ball1_y, color=self.colors['video1'], 
+    #                 linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+    #             ax.plot(aligned_ball2_x, aligned_ball2_y, color=self.colors['video2'], 
+    #                 linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
                 
-                # Draw alignment connections (sample every N points)
-                step = max(1, len(path) // 10)
-                for i in range(0, len(path), step):
-                    idx1, idx2 = path[i]
-                    ax.plot([ball1_x[idx1], ball2_x[idx2]], [ball1_y[idx1], ball2_y[idx2]], 
-                        color=self.colors['alignment'], alpha=0.3, linewidth=1, linestyle=':')
+    #             # Draw alignment connections (sample every N points)
+    #             step = max(1, len(path) // 10)
+    #             for i in range(0, len(path), step):
+    #                 idx1, idx2 = path[i]
+    #                 ax.plot([ball1_x[idx1], ball2_x[idx2]], [ball1_y[idx1], ball2_y[idx2]], 
+    #                     color=self.colors['alignment'], alpha=0.3, linewidth=1, linestyle=':')
             
-            # Mark start points
-            ax.scatter(ball1_x[0], ball1_y[0], color=self.colors['video1'], 
-                    s=150, marker='o', edgecolors='black', linewidths=2, zorder=5)
-            ax.scatter(ball2_x[0], ball2_y[0], color=self.colors['video2'], 
-                    s=150, marker='s', edgecolors='black', linewidths=2, zorder=5)
+    #         # Mark start points
+    #         ax.scatter(ball1_x[0], ball1_y[0], color=self.colors['video1'], 
+    #                 s=150, marker='o', edgecolors='black', linewidths=2, zorder=5)
+    #         ax.scatter(ball2_x[0], ball2_y[0], color=self.colors['video2'], 
+    #                 s=150, marker='s', edgecolors='black', linewidths=2, zorder=5)
             
-            # # Add DTW similarity
-            # similarity = max(0, 100 - distance * 10)
-            # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.3f}', 
-            #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
-            #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-        else:
-            print("   ⚠️ Ball trajectory data not available, skipping ball plot")
-            ax.text(0.5, 0.5, 'Ball trajectory data not available', 
-                transform=ax.transAxes, ha='center', va='center', fontsize=12)
+    #         # # Add DTW similarity
+    #         # similarity = max(0, 100 - distance * 10)
+    #         # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.3f}', 
+    #         #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
+    #         #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    #     else:
+    #         print("    Ball trajectory data not available, skipping ball plot")
+    #         ax.text(0.5, 0.5, 'Ball trajectory data not available', 
+    #             transform=ax.transAxes, ha='center', va='center', fontsize=12)
         
-        ax.set_xlabel("X Position (normalized)")
-        ax.set_ylabel("Y Position (normalized)")
-        ax.legend(loc='best', fontsize=8)
-        ax.grid(True, alpha=0.3)
-        ax.invert_yaxis()
+    #     ax.set_xlabel("X Position (normalized)")
+    #     ax.set_ylabel("Y Position (normalized)")
+    #     ax.legend(loc='best', fontsize=8)
+    #     ax.grid(True, alpha=0.3)
+    #     ax.invert_yaxis()
 
-    def _plot_wrist_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot wrist trajectory comparison with DTW alignment (2D data)"""
-        ax.set_title("Wrist Trajectory Comparison (DTW Aligned)")
+    # def _plot_wrist_trajectory_comparison(self, ax, dtw_results, video1_data, video2_data):
+    #     """Plot wrist trajectory comparison with DTW alignment (2D data)"""
+    #     ax.set_title("Wrist Trajectory Comparison (DTW Aligned)")
         
-        # Extract actual wrist trajectory data
-        wrist1_trajectory = self._extract_wrist_trajectory(video1_data)
-        wrist2_trajectory = self._extract_wrist_trajectory(video2_data)
+    #     # Extract actual wrist trajectory data
+    #     wrist1_trajectory = self._extract_wrist_trajectory(video1_data)
+    #     wrist2_trajectory = self._extract_wrist_trajectory(video2_data)
         
-        if wrist1_trajectory and wrist2_trajectory:
-            wrist1_x, wrist1_y = wrist1_trajectory
-            wrist2_x, wrist2_y = wrist2_trajectory
+    #     if wrist1_trajectory and wrist2_trajectory:
+    #         wrist1_x, wrist1_y = wrist1_trajectory
+    #         wrist2_x, wrist2_y = wrist2_trajectory
             
-            # Apply DTW to 2D trajectory
-            distance, path = self._apply_dtw_to_trajectory_2d(wrist1_x, wrist1_y, wrist2_x, wrist2_y)
+    #         # Apply DTW to 2D trajectory
+    #         distance, path = self._apply_dtw_to_trajectory_2d(wrist1_x, wrist1_y, wrist2_x, wrist2_y)
             
-            # Plot original trajectories
-            # ax.plot(wrist1_x, wrist1_y, color=self.colors['video1'], linewidth=1.5, 
-            #     marker='o', markersize=3, label='Video 1 Wrist', alpha=0.5, linestyle='--')
-            # ax.plot(wrist2_x, wrist2_y, color=self.colors['video2'], linewidth=1.5, 
-            #     marker='s', markersize=3, label='Video 2 Wrist', alpha=0.5, linestyle='--')
+    #         # Plot original trajectories
+    #         # ax.plot(wrist1_x, wrist1_y, color=self.colors['video1'], linewidth=1.5, 
+    #         #     marker='o', markersize=3, label='Video 1 Wrist', alpha=0.5, linestyle='--')
+    #         # ax.plot(wrist2_x, wrist2_y, color=self.colors['video2'], linewidth=1.5, 
+    #         #     marker='s', markersize=3, label='Video 2 Wrist', alpha=0.5, linestyle='--')
             
-            # Create aligned trajectories
-            if path:
-                aligned_wrist1_x = [wrist1_x[i] for i, j in path]
-                aligned_wrist1_y = [wrist1_y[i] for i, j in path]
-                aligned_wrist2_x = [wrist2_x[j] for i, j in path]
-                aligned_wrist2_y = [wrist2_y[j] for i, j in path]
+    #         # Create aligned trajectories
+    #         if path:
+    #             aligned_wrist1_x = [wrist1_x[i] for i, j in path]
+    #             aligned_wrist1_y = [wrist1_y[i] for i, j in path]
+    #             aligned_wrist2_x = [wrist2_x[j] for i, j in path]
+    #             aligned_wrist2_y = [wrist2_y[j] for i, j in path]
                 
-                # Plot aligned trajectories
-                ax.plot(aligned_wrist1_x, aligned_wrist1_y, color=self.colors['video1'], 
-                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
-                ax.plot(aligned_wrist2_x, aligned_wrist2_y, color=self.colors['video2'], 
-                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+    #             # Plot aligned trajectories
+    #             ax.plot(aligned_wrist1_x, aligned_wrist1_y, color=self.colors['video1'], 
+    #                 linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+    #             ax.plot(aligned_wrist2_x, aligned_wrist2_y, color=self.colors['video2'], 
+    #                 linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
                 
-                # Draw alignment connections
-                step = max(1, len(path) // 10)
-                for i in range(0, len(path), step):
-                    idx1, idx2 = path[i]
-                    ax.plot([wrist1_x[idx1], wrist2_x[idx2]], [wrist1_y[idx1], wrist2_y[idx2]], 
-                        color=self.colors['alignment'], alpha=0.3, linewidth=1, linestyle=':')
+    #             # Draw alignment connections
+    #             step = max(1, len(path) // 10)
+    #             for i in range(0, len(path), step):
+    #                 idx1, idx2 = path[i]
+    #                 ax.plot([wrist1_x[idx1], wrist2_x[idx2]], [wrist1_y[idx1], wrist2_y[idx2]], 
+    #                     color=self.colors['alignment'], alpha=0.3, linewidth=1, linestyle=':')
             
-            # Mark start points
-            ax.scatter(wrist1_x[0], wrist1_y[0], color=self.colors['video1'], 
-                    s=150, marker='o', edgecolors='black', linewidths=2, zorder=5)
-            ax.scatter(wrist2_x[0], wrist2_y[0], color=self.colors['video2'], 
-                    s=150, marker='s', edgecolors='black', linewidths=2, zorder=5)
+    #         # Mark start points
+    #         ax.scatter(wrist1_x[0], wrist1_y[0], color=self.colors['video1'], 
+    #                 s=150, marker='o', edgecolors='black', linewidths=2, zorder=5)
+    #         ax.scatter(wrist2_x[0], wrist2_y[0], color=self.colors['video2'], 
+    #                 s=150, marker='s', edgecolors='black', linewidths=2, zorder=5)
             
-            # Add DTW similarity
-            # print("[DEBUG: DISTANCE]: ", distance)
-            # similarity = max(0, 100 - distance * 10)
-            # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.3f}', 
-            #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
-            #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-        else:
-            print("   ⚠️ Wrist trajectory data not available, skipping wrist plot")
-            ax.text(0.5, 0.5, 'Wrist trajectory data not available', 
-                transform=ax.transAxes, ha='center', va='center', fontsize=12)
+    #         # Add DTW similarity
+    #         # print("[DEBUG: DISTANCE]: ", distance)
+    #         # similarity = max(0, 100 - distance * 10)
+    #         # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.3f}', 
+    #         #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
+    #         #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    #     else:
+    #         print("    Wrist trajectory data not available, skipping wrist plot")
+    #         ax.text(0.5, 0.5, 'Wrist trajectory data not available', 
+    #             transform=ax.transAxes, ha='center', va='center', fontsize=12)
         
-        ax.set_xlabel("X Position (normalized)")
-        ax.set_ylabel("Y Position (normalized)")
-        ax.legend(loc='best', fontsize=8)
-        ax.grid(True, alpha=0.3)
-        ax.invert_yaxis()
+    #     ax.set_xlabel("X Position (normalized)")
+    #     ax.set_ylabel("Y Position (normalized)")
+    #     ax.legend(loc='best', fontsize=8)
+    #     ax.grid(True, alpha=0.3)
+    #     ax.invert_yaxis()
 
-    def _plot_elbow_angle_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot elbow angle comparison with DTW alignment (1D data)"""
-        ax.set_title("Elbow Angle Comparison (DTW Aligned)")
+    # def _plot_elbow_angle_comparison(self, ax, dtw_results, video1_data, video2_data):
+    #     """Plot elbow angle comparison with DTW alignment (1D data)"""
+    #     ax.set_title("Elbow Angle Comparison (DTW Aligned)")
         
-        # Extract actual elbow angle data
+    #     # Extract actual elbow angle data
 
-        elbow1_angles = self._extract_elbow_angles(video1_data)
-        elbow2_angles = self._extract_elbow_angles(video2_data)
+    #     elbow1_angles = self._extract_elbow_angles(video1_data)
+    #     elbow2_angles = self._extract_elbow_angles(video2_data)
         
-        if elbow1_angles and elbow2_angles:
-            # Apply DTW to 1D angle sequences
-            distance, path = self._apply_dtw_to_trajectories(elbow1_angles, elbow2_angles)
+    #     if elbow1_angles and elbow2_angles:
+    #         # Apply DTW to 1D angle sequences
+    #         distance, path = self._apply_dtw_to_trajectories(elbow1_angles, elbow2_angles)
             
-            frames1 = range(len(elbow1_angles))
-            frames2 = range(len(elbow2_angles))
+    #         frames1 = range(len(elbow1_angles))
+    #         frames2 = range(len(elbow2_angles))
             
-            # Create aligned sequences using DTW path
-            if path:
-                aligned_elbow1 = [elbow1_angles[i] for i, j in path]
-                aligned_elbow2 = [elbow2_angles[j] for i, j in path]
-                aligned_frames = range(len(aligned_elbow1))
+    #         # Create aligned sequences using DTW path
+    #         if path:
+    #             aligned_elbow1 = [elbow1_angles[i] for i, j in path]
+    #             aligned_elbow2 = [elbow2_angles[j] for i, j in path]
+    #             aligned_frames = range(len(aligned_elbow1))
                 
-                # Plot aligned angles with solid lines
-                ax.plot(aligned_frames, aligned_elbow1, color=self.colors['video1'], 
-                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
-                ax.plot(aligned_frames, aligned_elbow2, color=self.colors['video2'], 
-                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+    #             # Plot aligned angles with solid lines
+    #             ax.plot(aligned_frames, aligned_elbow1, color=self.colors['video1'], 
+    #                 linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+    #             ax.plot(aligned_frames, aligned_elbow2, color=self.colors['video2'], 
+    #                 linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
                 
-                # Fill area between aligned curves
-                ax.fill_between(aligned_frames, aligned_elbow1, aligned_elbow2, 
-                            alpha=0.2, color=self.colors['alignment'])
+    #             # Fill area between aligned curves
+    #             ax.fill_between(aligned_frames, aligned_elbow1, aligned_elbow2, 
+    #                         alpha=0.2, color=self.colors['alignment'])
             
-            # Add reference lines
-            ax.axhline(y=90, color='gray', linestyle='--', alpha=0.4, linewidth=1, label='90° Ref')
-            ax.axhline(y=120, color='gray', linestyle=':', alpha=0.4, linewidth=1, label='120° Ref')
+    #         # Add reference lines
+    #         ax.axhline(y=90, color='gray', linestyle='--', alpha=0.4, linewidth=1, label='90° Ref')
+    #         ax.axhline(y=120, color='gray', linestyle=':', alpha=0.4, linewidth=1, label='120° Ref')
             
-            # Add DTW similarity
-            # similarity = max(0, 100 - distance * 0.5)
-            # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.2f}°', 
-            #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
-            #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-        else:
-            print("   ⚠️ Elbow angle data not available, skipping elbow plot")
-            ax.text(0.5, 0.5, 'Elbow angle data not available', 
-                transform=ax.transAxes, ha='center', va='center', fontsize=12)
+    #         # Add DTW similarity
+    #         # similarity = max(0, 100 - distance * 0.5)
+    #         # ax.text(0.02, 0.98, f'DTW Similarity: {similarity:.1f}%\nDistance: {distance:.2f}°', 
+    #         #     transform=ax.transAxes, fontsize=9, verticalalignment='top',
+    #         #     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    #     else:
+    #         print("Elbow angle data not available, skipping elbow plot")
+    #         ax.text(0.5, 0.5, 'Elbow angle data not available', 
+    #             transform=ax.transAxes, ha='center', va='center', fontsize=12)
 
-        ax.set_xlabel("Frame (DTW Aligned)")
-        ax.set_ylabel("Elbow Angle (degrees)")
-        ax.set_ylim(0, 180)
-        ax.legend(loc='best', fontsize=8)
-        ax.grid(True, alpha=0.3)
+    #     ax.set_xlabel("Frame (DTW Aligned)")
+    #     ax.set_ylabel("Elbow Angle (degrees)")
+    #     ax.set_ylim(0, 180)
+    #     ax.legend(loc='best', fontsize=8)
+    #     ax.grid(True, alpha=0.3)
 
-    def _plot_hip_stability_comparison(self, ax, dtw_results, video1_data, video2_data):
-        """Plot hip stability comparison with DTW alignment (1D data)"""
-        ax.set_title("Hip Stability Comparison (DTW Aligned)")
+    # def _plot_hip_stability_comparison(self, ax, dtw_results, video1_data, video2_data):
+    #     """Plot hip stability comparison with DTW alignment (1D data)"""
+    #     ax.set_title("Hip Stability Comparison (DTW Aligned)")
         
-        # Extract actual hip position data (1D - Y positions only)
-        hip1_positions = self._extract_hip_positions(video1_data)
-        hip2_positions = self._extract_hip_positions(video2_data)
+    #     # Extract actual hip position data (1D - Y positions only)
+    #     hip1_positions = self._extract_hip_positions(video1_data)
+    #     hip2_positions = self._extract_hip_positions(video2_data)
         
-        if hip1_positions and hip2_positions:
-            # Apply DTW to 1D hip position sequences
-            distance, path = self._apply_dtw_to_trajectories(hip1_positions, hip2_positions)
+    #     if hip1_positions and hip2_positions:
+    #         # Apply DTW to 1D hip position sequences
+    #         distance, path = self._apply_dtw_to_trajectories(hip1_positions, hip2_positions)
             
-            frames1 = range(len(hip1_positions))
-            frames2 = range(len(hip2_positions))
+    #         frames1 = range(len(hip1_positions))
+    #         frames2 = range(len(hip2_positions))
 
-            # Create aligned sequences using DTW path
-            if path:
-                aligned_hip1 = [hip1_positions[i] for i, j in path]
-                aligned_hip2 = [hip2_positions[j] for i, j in path]
-                aligned_frames = range(len(aligned_hip1))
+    #         # Create aligned sequences using DTW path
+    #         if path:
+    #             aligned_hip1 = [hip1_positions[i] for i, j in path]
+    #             aligned_hip2 = [hip2_positions[j] for i, j in path]
+    #             aligned_frames = range(len(aligned_hip1))
                 
-                # Plot aligned positions with solid lines
-                ax.plot(aligned_frames, aligned_hip1, color=self.colors['video1'], 
-                    linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
-                ax.plot(aligned_frames, aligned_hip2, color=self.colors['video2'], 
-                    linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
+    #             # Plot aligned positions with solid lines
+    #             ax.plot(aligned_frames, aligned_hip1, color=self.colors['video1'], 
+    #                 linewidth=2.5, marker='o', markersize=3, label='User (DTW)', alpha=1.0)
+    #             ax.plot(aligned_frames, aligned_hip2, color=self.colors['video2'], 
+    #                 linewidth=2.5, marker='s', markersize=3, label='Player (DTW)', alpha=1.0)
                 
-                # Fill area between curves
-                ax.fill_between(aligned_frames, aligned_hip1, aligned_hip2, 
-                            alpha=0.2, color=self.colors['alignment'])
+    #             # Fill area between curves
+    #             ax.fill_between(aligned_frames, aligned_hip1, aligned_hip2, 
+    #                         alpha=0.2, color=self.colors['alignment'])
 
-            # Calculate stability metrics
-            hip1_std = np.std(hip1_positions)
-            hip2_std = np.std(hip2_positions)
-            similarity = max(0, 100 - distance * 50)
+    #         # Calculate stability metrics
+    #         hip1_std = np.std(hip1_positions)
+    #         hip2_std = np.std(hip2_positions)
+    #         similarity = max(0, 100 - distance * 50)
             
-            # Determine which is more stable
-            more_stable = "User" if hip1_std < hip2_std else "Player"
+    #         # Determine which is more stable
+    #         more_stable = "User" if hip1_std < hip2_std else "Player"
 
-            stability_text = (
-                # f'DTW Similarity: {similarity:.1f}%\n'
-                f'User Stability (σ): {hip1_std:.4f}\n'
-                f'Player Stability (σ): {hip2_std:.4f}\n'
-                f'More Stable: {more_stable}'
-            )
+    #         stability_text = (
+    #             # f'DTW Similarity: {similarity:.1f}%\n'
+    #             f'User Stability (σ): {hip1_std:.4f}\n'
+    #             f'Player Stability (σ): {hip2_std:.4f}\n'
+    #             f'More Stable: {more_stable}'
+    #         )
             
-            ax.text(0.02, 0.98, stability_text, 
-                transform=ax.transAxes, fontsize=9, verticalalignment='top',
-                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    #         ax.text(0.02, 0.98, stability_text, 
+    #             transform=ax.transAxes, fontsize=9, verticalalignment='top',
+    #             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
             
-            # Add average position lines
-            ax.axhline(y=np.mean(hip1_positions), color=self.colors['video1'], 
-                    linestyle=':', alpha=0.3, linewidth=1.5)
-            ax.axhline(y=np.mean(hip2_positions), color=self.colors['video2'], 
-                    linestyle=':', alpha=0.3, linewidth=1.5)
-        else:
-            print("   ⚠️ Hip position data not available, skipping hip plot")
-            ax.text(0.5, 0.5, 'Hip position data not available', 
-                transform=ax.transAxes, ha='center', va='center', fontsize=12)
+    #         # Add average position lines
+    #         ax.axhline(y=np.mean(hip1_positions), color=self.colors['video1'], 
+    #                 linestyle=':', alpha=0.3, linewidth=1.5)
+    #         ax.axhline(y=np.mean(hip2_positions), color=self.colors['video2'], 
+    #                 linestyle=':', alpha=0.3, linewidth=1.5)
+    #     else:
+    #         print("    Hip position data not available, skipping hip plot")
+    #         ax.text(0.5, 0.5, 'Hip position data not available', 
+    #             transform=ax.transAxes, ha='center', va='center', fontsize=12)
 
-        ax.set_xlabel("Frame (DTW Aligned)")
-        ax.set_ylabel("Hip Position (normalized)")
-        ax.legend(loc='best', fontsize=8)
-        ax.grid(True, alpha=0.3)
-        ax.invert_yaxis()
+    #     ax.set_xlabel("Frame (DTW Aligned)")
+    #     ax.set_ylabel("Hip Position (normalized)")
+    #     ax.legend(loc='best', fontsize=8)
+    #     ax.grid(True, alpha=0.3)
+    #     ax.invert_yaxis()
 
     def _interpolate_missing_values(self, data: List[float]) -> List[float]:
         """
@@ -460,7 +783,7 @@ class DTWVisualizer:
         
         # If no valid values, cannot interpolate
         if len(valid_indices) == 0:
-            print("   ⚠️ No valid values for interpolation")
+            print(" No valid values for interpolation")
             return data.tolist()
         
         # Interpolate missing values
@@ -500,13 +823,13 @@ class DTWVisualizer:
             
             # Check if we still have valid data after interpolation
             if all(x == -10 for x in ball_x) or all(y == -10 for y in ball_y):
-                print("   ⚠️ No valid ball trajectory data after interpolation")
+                print("    No valid ball trajectory data after interpolation")
                 return None
             
             return (ball_x, ball_y)
             
         except Exception as e:
-            print(f"   ⚠️ Error extracting ball trajectory: {e}")
+            print(f"Error extracting ball trajectory: {e}")
             return None
 
     def _extract_wrist_trajectory(self, video_data: Dict) -> Optional[Tuple[List[float], List[float]]]:
@@ -542,13 +865,13 @@ class DTWVisualizer:
             
             # Check if we still have valid data after interpolation
             if all(x == -10 for x in wrist_x) or all(y == -10 for y in wrist_y):
-                print("   ⚠️ No valid wrist trajectory data after interpolation")
+                print("No valid wrist trajectory data after interpolation")
                 return None
             
             return (wrist_x, wrist_y)
             
         except Exception as e:
-            print(f"   ⚠️ Error extracting wrist trajectory: {e}")
+            print(f"Error extracting wrist trajectory: {e}")
             return None
 
     def _extract_elbow_angles(self, video_data: Dict) -> Optional[List[float]]:
@@ -594,13 +917,13 @@ class DTWVisualizer:
             
             # Check if we still have valid data after interpolation
             if all(angle == -10 for angle in elbow_angles):
-                print("   ⚠️ No valid elbow angle data after interpolation")
+                print("No valid elbow angle data after interpolation")
                 return None
             
             return elbow_angles
             
         except Exception as e:
-            print(f"   ⚠️ Error extracting elbow angles: {e}")
+            print(f"Error extracting elbow angles: {e}")
             return None
 
     def _extract_hip_positions(self, video_data: Dict) -> Optional[List[float]]:
@@ -634,18 +957,18 @@ class DTWVisualizer:
             
             # Check if we still have valid data after interpolation
             if all(pos == -10 for pos in hip_positions_y):
-                print("   ⚠️ No valid hip position data after interpolation")
+                print(" No valid hip position data after interpolation")
                 return None
             
             return hip_positions_y
 
         except Exception as e:
-            print(f"   ⚠️ Error extracting hip positions: {e}")
+            print(f"Error extracting hip positions: {e}")
             return None
-            
+    
     def create_comprehensive_dtw_report(self, dtw_results: Dict, video1_data: Dict, 
-                                      video2_data: Dict, video1_path: str, video2_path: str,
-                                      save_dir: str = None) -> Dict[str, str]:
+                                  video2_data: Dict, video1_path: str, video2_path: str,
+                                  save_dir: str = None) -> Dict[str, str]:
         """
         Create comprehensive DTW visualization report.
         
@@ -660,7 +983,7 @@ class DTWVisualizer:
         Returns:
             Dictionary of visualization file paths
         """
-        print("🎨 Creating comprehensive DTW visualization report...")
+        # print(" Creating comprehensive DTW visualization report...")
         
         if not save_dir:
             base_name1 = os.path.splitext(os.path.basename(video1_path))[0]
@@ -669,22 +992,62 @@ class DTWVisualizer:
         
         os.makedirs(save_dir, exist_ok=True)
         
-        visualization_files = {}
-    
-        # Trajectory comparison
-        trajectory_path = os.path.join(save_dir, "trajectory_comparison.png")
-        visualization_files['trajectories'] = self.create_trajectory_comparison_plot(
-            dtw_results, video1_data, video2_data, trajectory_path)
+        # Create all trajectory comparison plots
+        plot_paths = self.create_separate_trajectory_comparison_plot(
+            dtw_results, video1_data, video2_data, save_dir)
         
-        print(f"✅ DTW visualization report created in: {save_dir}")
-        print(f"📊 Generated {len(visualization_files)} visualization files")
+        # print(f" DTW visualization report created in: {save_dir}")
+        # print(f" Generated {len(plot_paths)} visualization files")
         
         # Save visualization index
         index_file = os.path.join(save_dir, "visualization_index.json")
         with open(index_file, 'w') as f:
-            json.dump(visualization_files, f, indent=2)
+            json.dump(plot_paths, f, indent=2)
         
-        return visualization_files
+        return plot_paths
+
+    # def create_comprehensive_dtw_report(self, dtw_results: Dict, video1_data: Dict, 
+    #                                   video2_data: Dict, video1_path: str, video2_path: str,
+    #                                   save_dir: str = None) -> Dict[str, str]:
+    #     """
+    #     Create comprehensive DTW visualization report.
+        
+    #     Args:
+    #         dtw_results: DTW analysis results
+    #         video1_data: First video's data
+    #         video2_data: Second video's data
+    #         video1_path: Path to first video
+    #         video2_path: Path to second video
+    #         save_dir: Directory to save visualizations
+            
+    #     Returns:
+    #         Dictionary of visualization file paths
+    #     """
+    #     print(" Creating comprehensive DTW visualization report...")
+        
+    #     if not save_dir:
+    #         base_name1 = os.path.splitext(os.path.basename(video1_path))[0]
+    #         base_name2 = os.path.splitext(os.path.basename(video2_path))[0]
+    #         save_dir = f"shooting_comparison/results/dtw_viz_{base_name1}_vs_{base_name2}"
+        
+    #     os.makedirs(save_dir, exist_ok=True)
+        
+    #     visualization_files = {}
+    
+    #     # Trajectory comparison
+    #     trajectory_path = os.path.join(save_dir, "trajectory_comparison.png")
+    #     visualization_files['trajectories'] = self.create_trajectory_comparison_plot(
+    #         dtw_results, video1_data, video2_data, trajectory_path)
+        
+    #     print(f"DTW visualization report created in: {save_dir}")
+    #     print(f"Generated {len(visualization_files)} visualization files")
+        
+    #     # Save visualization index
+    #     index_file = os.path.join(save_dir, "visualization_index.json")
+    #     with open(index_file, 'w') as f:
+    #         json.dump(visualization_files, f, indent=2)
+        
+    #     return visualization_files
 
 # Utility function for easy visualization
 def visualize_dtw_results(dtw_results: Dict, video1_data: Dict, video2_data: Dict,

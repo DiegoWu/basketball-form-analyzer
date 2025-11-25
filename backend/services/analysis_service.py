@@ -137,7 +137,34 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
             video_path, synthetic_base_path, save_results=True, include_dtw=True, create_visualizations=True, enable_shot_selection=False
         )
         os.unlink(video_path)
-        print("debug: Comparison result obtained")
+        metadata = comparison_result.get("metadata", {})
+        plot_paths = metadata.get("visualizations", {})
+        uploaded_plots = {}
+        
+        if 'ball_trajectory' in plot_paths:
+            uploaded_plots['ball_trajectory'] = storage_service.upload_comparison_image(
+                plot_paths['ball_trajectory']
+            )
+            os.remove(plot_paths['ball_trajectory'])  # Cleanup local file
+        
+        if 'wrist_trajectory' in plot_paths:
+            uploaded_plots['wrist_trajectory'] = storage_service.upload_comparison_image(
+                plot_paths['wrist_trajectory']
+            )
+            os.remove(plot_paths['wrist_trajectory'])
+        
+        if 'elbow_angle' in plot_paths:
+            uploaded_plots['elbow_angle'] = storage_service.upload_comparison_image(
+                plot_paths['elbow_angle']
+            )
+            os.remove(plot_paths['elbow_angle'])
+        
+        if 'hip_stability' in plot_paths:
+            uploaded_plots['hip_stability'] = storage_service.upload_comparison_image(
+                plot_paths['hip_stability']
+            )
+            os.remove(plot_paths['hip_stability'])
+                
         interpretation = comparison_result.get("interpretation", "No interpretation available")
         output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../shooting_comparison/results"))
         video_output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../data/visualized_video"))
@@ -155,19 +182,19 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
         print("debug: LLM response generated")
         file_name = os.path.basename(video_path)
         base_name = os.path.splitext(file_name)[0]
-        image_rel_path = f"dtw_viz_{base_name}_vs_{player_id}/trajectory_comparison.png"
-        image_path = f"/results/{image_rel_path}"
-        image_public_url = storage_service.upload_comparison_image(os.path.join(output_dir, image_rel_path))
+        # image_rel_path = f"dtw_viz_{base_name}_vs_{player_id}/trajectory_comparison.png"
+        # image_path = f"/results/{image_rel_path}"
+        # image_public_url = storage_service.upload_comparison_image(os.path.join(output_dir, image_rel_path))
         video_public_url = storage_service.upload_analyzed_video(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
         #delete the local video file after upload
         os.remove(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
         #delete the local image file after upload
-        os.remove(os.path.join(output_dir, image_rel_path))
-        print("debug: Image path set to", image_path)
+        # os.remove(os.path.join(output_dir, image_rel_path))
         results = {
             "comparison_result": comparison_result,
             "llm_response": llm_response,
-            "image_path": image_public_url,
+            # "image_path": image_public_url,
+            "plots": uploaded_plots,
             "normalized_data": normalized_data,
             "selectedPlayer": PLAYERS.get(player_id, {}),
             "analyzed_video_path": video_public_url,
@@ -200,6 +227,9 @@ def auto_compare_service(video: UploadFile):
         best_comparison_result = None
         best_player_id = None
         best_interpretation = None
+        output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../shooting_comparison/results"))
+        video_output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../data/visualized_video"))
+        plot_paths = {}
         for player_id in PLAYER_IDS:
         
             synthetic_base_path = f"output_dir/{player_id.lower()}"
@@ -210,8 +240,6 @@ def auto_compare_service(video: UploadFile):
             print("debug: Comparison result obtained")
             interpretation = comparison_result.get("interpretation", "No interpretation available")
 
-            output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../shooting_comparison/results"))
-            video_output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../data/visualized_video"))
             dtw_analysis = comparison_result.get("dtw_analysis", {})
             overall_score = dtw_analysis.get("overall_similarity", 0)
             print("[DEBUG]: overall_score", overall_score)
@@ -221,8 +249,11 @@ def auto_compare_service(video: UploadFile):
                 best_comparison_result = comparison_result
                 best_player_id = player_id
                 best_interpretation = interpretation
+                metadata = comparison_result.get("metadata", {})
+                plot_paths = metadata.get("visualizations", {})
 
         os.unlink(video_path)
+        print(plot_paths)
         print("debug: best overall score", best_overall_score)
         interpreter = AnalysisInterpreter()
         llm_prompt = interpreter.generate_llm_prompt(best_interpretation)
@@ -240,20 +271,48 @@ def auto_compare_service(video: UploadFile):
         # print("debug: LLM response generated")
         file_name = os.path.basename(video_path)
         base_name = os.path.splitext(file_name)[0]
-        image_rel_path = f"dtw_viz_{base_name}_vs_{player_id}/trajectory_comparison.png"
-        image_path = f"/results/{image_rel_path}"
-        image_public_url = storage_service.upload_comparison_image(os.path.join(output_dir, image_rel_path))
+        # image_rel_path = f"dtw_viz_{base_name}_vs_{player_id}/trajectory_comparison.png"
+        # image_path = f"/results/{image_rel_path}"
+        # image_public_url = storage_service.upload_comparison_image(os.path.join(output_dir, image_rel_path))
+        uploaded_plots = {}
+        
+        if 'ball_trajectory' in plot_paths:
+            uploaded_plots['ball_trajectory'] = storage_service.upload_comparison_image(
+                plot_paths['ball_trajectory']
+            )
+            os.remove(plot_paths['ball_trajectory'])  # Cleanup local file
+        
+        if 'wrist_trajectory' in plot_paths:
+            uploaded_plots['wrist_trajectory'] = storage_service.upload_comparison_image(
+                plot_paths['wrist_trajectory']
+            )
+            os.remove(plot_paths['wrist_trajectory'])
+        
+        if 'elbow_angle' in plot_paths:
+            uploaded_plots['elbow_angle'] = storage_service.upload_comparison_image(
+                plot_paths['elbow_angle']
+            )
+            os.remove(plot_paths['elbow_angle'])
+        
+        if 'hip_stability' in plot_paths:
+            uploaded_plots['hip_stability'] = storage_service.upload_comparison_image(
+                plot_paths['hip_stability']
+            )
+            os.remove(plot_paths['hip_stability'])
+        
+
         video_public_url = storage_service.upload_analyzed_video(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
         #delete the local video file after upload
         os.remove(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
         #delete the local image file after upload
-        os.remove(os.path.join(output_dir, image_rel_path))
+        # os.remove(os.path.join(output_dir, image_rel_path))
     
-        print("debug: Image path set to", image_path)
+        # print("debug: Image path set to", image_path)
         results = {
             "comparison_result": best_comparison_result,
             "llm_response": llm_response,
-            "image_path": image_public_url,
+            # "image_path": image_public_url,
+            "plots": uploaded_plots,
             "selectedPlayer": PLAYERS.get(best_player_id, {}),
             "analyzed_video_path": video_public_url,
             "normalized_data": normalized_data,

@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Dimensions,
   Image,
+  Modal,
 } from 'react-native';
 import { CONFIG, getSimilarityColor, getSimilarityLabel } from '../utils/config';
 import DetailedAnalysisScreen from './DetailedAnalysisScreen';
@@ -35,7 +36,8 @@ const ResultsScreen = ({ navigation, route }) => {
   });
 
   const [smsStatus, setSmsStatus] = useState(null);
-
+  const [selectedChart, setSelectedChart] = useState('ball_trajectory');
+  const [fullScreenImage, setFullScreenImage] = useState(null);
   const handleSendSms = async () => {
     const result = await sendTwilioMessage(
       "Your analysis is ready!",
@@ -339,31 +341,140 @@ const ResultsScreen = ({ navigation, route }) => {
     );
   };
 
+
   const renderImageTab = () => {
+    const plots = analysisResult?.plots || {};
+    
+    // Available charts with their data
+    const charts = [
+      { 
+        key: 'ball_trajectory', 
+        label: 'Ball Trajectory',
+        url: plots.ball_trajectory,
+        description: 'Compare your ball release path with the pro'
+      },
+      { 
+        key: 'wrist_trajectory', 
+        label: 'Wrist Trajectory',
+        url: plots.wrist_trajectory,
+        description: 'Analyze your wrist movement during the shot'
+      },
+      { 
+        key: 'elbow_angle', 
+        label: 'Elbow Angle',
+        url: plots.elbow_angle,
+        description: 'Check your elbow positioning and angle'
+      },
+      { 
+        key: 'hip_stability', 
+        label: 'Hip Stability',
+        url: plots.hip_stability,
+        description: 'Evaluate your lower body stability'
+      },
+    ].filter(chart => chart.url); // Only show available charts
+
+    if (charts.length === 0) {
+      return (
+        <View style={styles.tabContent}>
+          <Text style={styles.noImageText}>No charts available</Text>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.tabContent}>
+        {/* Vertical Scrollable Gallery */}
         <ScrollView
-          style={styles.imageScrollContainer}
-          contentContainerStyle={styles.imageContentContainer}
-          maximumZoomScale={5}
-          minimumZoomScale={1}
-          showsHorizontalScrollIndicator={false}
+          style={styles.verticalGallery}
+          contentContainerStyle={styles.verticalGalleryContent}
           showsVerticalScrollIndicator={false}
-          pinchGestureEnabled={true}
-          scrollEnabled={true}
         >
-          {analysisResult?.image_path ? (
-            <Image
-              // source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analysisResult.image_path}` }}
-              source={{ uri: `${analysisResult.image_path}` }}
-              style={styles.fullScreenImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <Text style={styles.noImageText}>No image to display</Text>
-          )}
+          {charts.map((chart, index) => (
+            <TouchableOpacity
+              key={chart.key}
+              style={styles.chartCard}
+              activeOpacity={0.8}
+              onPress={() => setFullScreenImage(chart)}
+            >
+              {/* Chart Header */}
+              <View style={styles.chartCardHeader}>
+                <Text style={styles.chartCardTitle}>{chart.label}</Text>
+                <Text style={styles.chartCardSubtitle}>{chart.description}</Text>
+              </View>
+              
+              {/* Chart Image */}
+              <View style={styles.chartImageContainer}>
+                <Image
+                  source={{ uri: chart.url }}
+                  style={styles.chartCardImage}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error(`Failed to load ${chart.label}:`, error.nativeEvent.error);
+                  }}
+                />
+                {/* Tap to Expand Overlay */}
+                <View style={styles.expandOverlay}>
+                  <Text style={styles.expandText}>Tap to expand</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
-        <Text style={styles.imageHint}>Pinch to zoom, drag to move</Text>
+
+        {/* Full-Screen Modal */}
+        <Modal
+          visible={!!fullScreenImage}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setFullScreenImage(null)}
+        >
+          <View style={styles.fullScreenModal}>
+            {/* Header with Close Button */}
+            <View style={styles.fullScreenModalHeader}>
+              {fullScreenImage && (
+                <View style={styles.fullScreenTitleContainer}>
+                  <Text style={styles.fullScreenTitle}>
+                    {fullScreenImage.label}
+                  </Text>
+                  <Text style={styles.fullScreenSubtitle}>
+                    {fullScreenImage.description}
+                  </Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setFullScreenImage(null)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Zoomable Image */}
+            <ScrollView
+              maximumZoomScale={5}
+              minimumZoomScale={1}
+              contentContainerStyle={styles.fullScreenImageContainer}
+              pinchGestureEnabled={true}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+            >
+              {fullScreenImage && (
+                <Image
+                  source={{ uri: fullScreenImage.url }}
+                  style={styles.fullScreenImage}
+                  resizeMode="contain"
+                />
+              )}
+            </ScrollView>
+
+            {/* Bottom Hint */}
+            <View style={styles.fullScreenFooter}>
+              <Text style={styles.fullScreenHint}>
+                Pinch to zoom • Drag to pan
+              </Text>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   };
@@ -486,7 +597,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 2,
   },
   
-  // ✅ Tab Content Styles
   tabContent: {
     flex: 1,
     backgroundColor: '#000',
@@ -523,7 +633,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   
-  // ✅ Replay Tab Styles
   replayContainer: {
     flex: 1,
     backgroundColor: '#000',
@@ -814,6 +923,162 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  chartSelector: {
+    maxHeight: 50,
+    marginBottom: 10,
+  },
+  chartButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  chartButtonActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  chartButtonText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  chartButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  imageHint: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    textTransform: 'capitalize',
+  },
+  verticalGallery: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  verticalGalleryContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  chartCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  chartCardHeader: {
+    padding: 16,
+    paddingBottom: 12,
+  },
+  chartCardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  chartCardSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    lineHeight: 20,
+  },
+  chartImageContainer: {
+    position: 'relative',
+    backgroundColor: '#0a0a0a',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  chartCardImage: {
+    width: '100%',
+    height: 280,
+  },
+  expandOverlay: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(78, 205, 196, 0.5)',
+  },
+  expandText: {
+    color: '#4ECDC4',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  fullScreenModal: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  fullScreenModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 16,
+    paddingTop: 60, // Account for status bar
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  fullScreenTitleContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  fullScreenTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  fullScreenSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    lineHeight: 20,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '300',
+  },
+  fullScreenImageContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: width,
+    height: height * 0.75,
+  },
+  fullScreenFooter: {
+    padding: 16,
+    paddingBottom: 32,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  fullScreenHint: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

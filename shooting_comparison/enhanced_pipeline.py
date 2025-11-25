@@ -370,18 +370,18 @@ class EnhancedShootingComparisonPipeline(ShootingComparisonPipeline):
             }
             
             print("   🎨 Starting comprehensive DTW report creation...")
-            visualization_files = visualizer.create_comprehensive_dtw_report(
+            visualization_plot_paths = visualizer.create_comprehensive_dtw_report(
                 dtw_results_for_viz, 
                 video1_data, video2_data, 
                 self.video1_path, self.video2_path
             )
             
-            if visualization_files:
-                final_results['metadata']['visualizations'] = visualization_files
-                print(f"   ✅ Created {len(visualization_files)} DTW visualization files")
-                for viz_type, file_path in visualization_files.items():
-                    if file_path:
-                        print(f"      📁 {viz_type}: {file_path}")
+            if visualization_plot_paths:
+                final_results['metadata']['visualizations'] = visualization_plot_paths
+                print(f"   ✅ Created DTW visualization plots")
+                # for viz_type, file_path in visualization_files.items():
+                #     if file_path:
+                #         print(f"      📁 {viz_type}: {file_path}")
             else:
                 print("   ⚠️ No visualization files were created")
             
