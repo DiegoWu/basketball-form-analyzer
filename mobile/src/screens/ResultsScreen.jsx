@@ -127,7 +127,7 @@ const ResultsScreen = ({ navigation, route }) => {
   };
 
   const renderPlayerComparison = () => {
-    console.log("route.params", route.params)
+    // console.log("route.params", route.params)
 
     if (!selectedPlayer) return null;
     return (
@@ -354,7 +354,8 @@ const ResultsScreen = ({ navigation, route }) => {
         >
           {analysisResult?.image_path ? (
             <Image
-              source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analysisResult.image_path}` }}
+              // source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analysisResult.image_path}` }}
+              source={{ uri: `${analysisResult.image_path}` }}
               style={styles.fullScreenImage}
               resizeMode="contain"
             />
@@ -383,7 +384,8 @@ const ResultsScreen = ({ navigation, route }) => {
       <View style={styles.tabContent}>
         <View style={styles.replayContainer}>
           <Video
-            source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analysisResult?.analyzed_video_path}` }}
+            // source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analysisResult?.analyzed_video_path}` }}
+            source={{ uri: `${analysisResult?.analyzed_video_path}` }}
             style={styles.replayVideo}
             controls={true}
             resizeMode="contain"

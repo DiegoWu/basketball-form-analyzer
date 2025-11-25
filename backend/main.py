@@ -31,8 +31,8 @@ app = FastAPI(
 
 results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../shooting_comparison/results"))
 visualized_video_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/visualized_video"))
-app.mount("/results", StaticFiles(directory=results_dir), name="results")
-app.mount("/data/visualized_video", StaticFiles(directory=str(visualized_video_dir)), name="visualized_video")
+# app.mount("/results", StaticFiles(directory=results_dir), name="results")
+# app.mount("/data/visualized_video", StaticFiles(directory=str(visualized_video_dir)), name="visualized_video")
 
 # # Configure CORS
 # app.add_middleware(

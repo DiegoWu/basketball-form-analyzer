@@ -5,16 +5,18 @@ import math
 from datetime import datetime
 from fastapi import UploadFile, HTTPException
 from typing import Dict
+import json
+
 from shooting_comparison.analysis_interpreter import AnalysisInterpreter
 from shooting_comparison.enhanced_pipeline import EnhancedShootingComparisonPipeline
 from backend.routes.llm_routes import LLMService
 from backend.config import PLAYER_IDS, PLAYERS
-import json
-
+from backend.services.storage_service import storage_service
 from basketball_shooting_integrated_pipeline import BasketballShootingIntegratedPipeline
 ANALYSIS_AVAILABLE = True 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+    
 def clean_floats(obj):
     if isinstance(obj, dict):
         return {k: clean_floats(v) for k, v in obj.items()}
@@ -110,7 +112,7 @@ def user_video_replay(video_path: str):
             }
     except Exception as e:
         print(f"Error loading normalized data: {e}")
-    
+
 def compare_with_player_service(video: UploadFile, player_id: str, player_style: str):
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
@@ -138,7 +140,7 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
         print("debug: Comparison result obtained")
         interpretation = comparison_result.get("interpretation", "No interpretation available")
         output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../shooting_comparison/results"))
-
+        video_output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../data/visualized_video"))
         interpreter = AnalysisInterpreter()
         llm_prompt = interpreter.generate_llm_prompt(interpretation)
         prompt_file_name = f"llm_prompt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
@@ -147,7 +149,6 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
         with open(prompt_path, 'w', encoding='utf-8') as f:
                 f.write(llm_prompt)
 
-        print("debug: Initializing LLMService with prompt path", prompt_path)
         llm_service = LLMService(prompt_path)
         print("debug: Generating LLM response")
         llm_response = llm_service.generate_response()
@@ -156,17 +157,22 @@ def compare_with_player_service(video: UploadFile, player_id: str, player_style:
         base_name = os.path.splitext(file_name)[0]
         image_rel_path = f"dtw_viz_{base_name}_vs_{player_id}/trajectory_comparison.png"
         image_path = f"/results/{image_rel_path}"
+        image_public_url = storage_service.upload_comparison_image(os.path.join(output_dir, image_rel_path))
+        video_public_url = storage_service.upload_analyzed_video(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
+        #delete the local video file after upload
+        os.remove(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
+        #delete the local image file after upload
+        os.remove(os.path.join(output_dir, image_rel_path))
         print("debug: Image path set to", image_path)
         results = {
             "comparison_result": comparison_result,
             "llm_response": llm_response,
-            "image_path": image_path,
+            "image_path": image_public_url,
             "normalized_data": normalized_data,
             "selectedPlayer": PLAYERS.get(player_id, {}),
-            "analyzed_video_path": analyzed_video_path,
+            "analyzed_video_path": video_public_url,
         }
-        print("[DEBUG]: analyzed video path: ", analyzed_video_path)
-        print("debug: Final results prepared")
+
         results = clean_floats(results)
         return results
 
@@ -205,8 +211,11 @@ def auto_compare_service(video: UploadFile):
             interpretation = comparison_result.get("interpretation", "No interpretation available")
 
             output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../shooting_comparison/results"))
+            video_output_dir = os.path.abspath(os.path.join(CURRENT_DIR, "../../data/visualized_video"))
             dtw_analysis = comparison_result.get("dtw_analysis", {})
             overall_score = dtw_analysis.get("overall_similarity", 0)
+            print("[DEBUG]: overall_score", overall_score)
+            print("[DEBUG]: player_id", player_id)
             if overall_score > best_overall_score:
                 best_overall_score = overall_score
                 best_comparison_result = comparison_result
@@ -220,28 +229,33 @@ def auto_compare_service(video: UploadFile):
         prompt_file_name = f"llm_prompt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         prompt_path = os.path.join(output_dir, prompt_file_name)
         print("debug: Saving LLM prompt to", prompt_path)
-        try:
-            with open(prompt_path, 'w', encoding='utf-8') as f:
-                f.write(llm_prompt)
-        except Exception as e:
-            print(f"   Error saving LLM prompt: {e}")
+    
+        with open(prompt_path, 'w', encoding='utf-8') as f:
+            f.write(llm_prompt)
 
         print("debug: Initializing LLMService with prompt path", prompt_path)
         llm_service = LLMService(prompt_path)
-        print("debug: Generating LLM response")
+        # print("debug: Generating LLM response")
         llm_response = llm_service.generate_response()
-        print("debug: LLM response generated")
+        # print("debug: LLM response generated")
         file_name = os.path.basename(video_path)
         base_name = os.path.splitext(file_name)[0]
         image_rel_path = f"dtw_viz_{base_name}_vs_{player_id}/trajectory_comparison.png"
         image_path = f"/results/{image_rel_path}"
+        image_public_url = storage_service.upload_comparison_image(os.path.join(output_dir, image_rel_path))
+        video_public_url = storage_service.upload_analyzed_video(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
+        #delete the local video file after upload
+        os.remove(os.path.join(video_output_dir, f"{base_name}_original_analyzed.mp4"))
+        #delete the local image file after upload
+        os.remove(os.path.join(output_dir, image_rel_path))
+    
         print("debug: Image path set to", image_path)
         results = {
             "comparison_result": best_comparison_result,
             "llm_response": llm_response,
-            "image_path": image_path,
+            "image_path": image_public_url,
             "selectedPlayer": PLAYERS.get(best_player_id, {}),
-            "analyzed_video_path": analyzed_video_path,
+            "analyzed_video_path": video_public_url,
             "normalized_data": normalized_data,
         }
         print("debug: Final results prepared")

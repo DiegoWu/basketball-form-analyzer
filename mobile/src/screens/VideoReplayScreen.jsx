@@ -230,10 +230,10 @@ const VideoReplayScreen = ({ navigation, route }) => {
       
       if (data.naturalSize?.frameRate) {
         detectedFps = data.naturalSize.frameRate;
-        console.log('✅ Detected FPS from naturalSize:', detectedFps);
+        // console.log('✅ Detected FPS from naturalSize:', detectedFps);
       } else if (data.videoTracks && data.videoTracks.length > 0) {
         detectedFps = data.videoTracks[0].nominalFrameRate || 30;
-        console.log('✅ Detected FPS from videoTracks:', detectedFps);
+        // console.log('✅ Detected FPS from videoTracks:', detectedFps);
       }
       
       setVideoFps(detectedFps);
@@ -242,14 +242,14 @@ const VideoReplayScreen = ({ navigation, route }) => {
       const calculatedTotalFrames = Math.floor(data.duration * detectedFps);
       setTotalFrames(calculatedTotalFrames);
       
-      console.log('📊 Video info:', {
-        duration: data.duration,
-        fps: detectedFps,
-        totalFrames: calculatedTotalFrames,
-        normalizedDataFrames: normalizedData?.length,
-        dataStartFrame: normalizedData?.[0]?.frame_index,
-        dataEndFrame: normalizedData?.[normalizedData.length - 1]?.frame_index
-      });
+      // console.log('📊 Video info:', {
+      //   duration: data.duration,
+      //   fps: detectedFps,
+      //   totalFrames: calculatedTotalFrames,
+      //   normalizedDataFrames: normalizedData?.length,
+      //   dataStartFrame: normalizedData?.[0]?.frame_index,
+      //   dataEndFrame: normalizedData?.[normalizedData.length - 1]?.frame_index
+      // });
       
       setIsLoading(false);
     };
@@ -304,9 +304,9 @@ const VideoReplayScreen = ({ navigation, route }) => {
   
     const jumpToFrame = (frameIndex) => {
       const timeInSeconds = (frameIndex) / (fps - 1);
-      console.log("[DEBUG]: jumptoframe")
-      console.log(timeInSeconds)
-      console.log(frameIndex)
+      // console.log("[DEBUG]: jumptoframe")
+      // console.log(timeInSeconds)
+      // console.log(frameIndex)
       const clampedTime = timeInSeconds; 
     //   Math.min(Math.max(timeInSeconds, 0), duration);
       setCurrentTime(clampedTime);
@@ -382,7 +382,8 @@ const VideoReplayScreen = ({ navigation, route }) => {
           
           <Video
             ref={videoRef}
-            source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analyzedVideoPath}` }}
+            // source={{ uri: `${CONFIG.BACKEND.BASE_URL}${analyzedVideoPath}` }}
+            source={{ uri: `${analyzedVideoPath}` }}
             style={styles.video}
             paused={paused}
             onLoad={handleLoad}
@@ -439,8 +440,8 @@ const VideoReplayScreen = ({ navigation, route }) => {
             >
               {getPhaseFrames().map((phaseInfo, index) => {
                 const isActive = selectedPhase === phaseInfo.phase;
-                console.log("[DEBUG] phase info")
-                console.log(phaseInfo)
+                // console.log("[DEBUG] phase info")
+                // console.log(phaseInfo)
                 return (
                   <TouchableOpacity
                     key={`phase-${phaseInfo.phase}-${index}`}
