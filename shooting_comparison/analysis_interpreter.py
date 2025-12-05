@@ -652,7 +652,9 @@ class AnalysisInterpreter:
             # Calculate time to max angle (assuming 30fps for conversion)
             fps1 = video1.get('fps', 30.0)
             fps2 = video2.get('fps', 30.0)
-            
+            fps1 = self.safe_float(fps1)
+            fps2 = self.safe_float(fps2)
+
             time_to_max1 = both_max_frame1 / fps1
             time_to_max2 = both_max_frame2 / fps2
             
@@ -681,7 +683,9 @@ class AnalysisInterpreter:
             # Compare transition timing (time from max to next phase)
             time_to_trans1 = transition1.get('time_to_transition', 0)
             time_to_trans2 = transition2.get('time_to_transition', 0)
-            
+            time_to_trans1 = self.safe_float(time_to_trans1)
+            time_to_trans2 = self.safe_float(time_to_trans2)
+
             if abs(time_to_trans1 - time_to_trans2) > 0.1:
                 timing_diff = abs(time_to_trans1 - time_to_trans2)
                 # Determine difference level
@@ -783,7 +787,9 @@ class AnalysisInterpreter:
             # Compare ball height relative to hip at rising start
             ball_height1 = ball_position1.get('ball_height_relative_to_hip', 0)
             ball_height2 = ball_position2.get('ball_height_relative_to_hip', 0)
-            
+            ball_height1 = self.safe_float(ball_height1)
+            ball_height2 = self.safe_float(ball_height2)
+
             if abs(ball_height1 - ball_height2) > 0.02:  # 2cm threshold
                 ball_height_diff = abs(ball_height1 - ball_height2)
                 # Determine difference level
@@ -809,7 +815,9 @@ class AnalysisInterpreter:
             # Compare ball horizontal position relative to hip at rising start
             ball_horizontal1 = ball_position1.get('ball_horizontal_relative_to_hip', 0)
             ball_horizontal2 = ball_position2.get('ball_horizontal_relative_to_hip', 0)
-            
+            ball_horizontal1 = self.safe_float(ball_horizontal1)
+            ball_horizontal2 = self.safe_float(ball_horizontal2)
+
             if abs(ball_horizontal1 - ball_horizontal2) > 0.02:  # 2cm threshold
                 ball_horizontal_diff = abs(ball_horizontal1 - ball_horizontal2)
                 # Determine difference level
@@ -839,7 +847,9 @@ class AnalysisInterpreter:
         if timing1 and timing2:
             windup1 = timing1.get('windup_time', 0)
             windup2 = timing2.get('windup_time', 0)
-            
+            windup1 = self.safe_float(windup1)
+            windup2 = self.safe_float(windup2)
+
             if abs(windup1 - windup2) > 0.1:
                 windup_diff = abs(windup1 - windup2)
                 # Determine difference level
@@ -870,7 +880,9 @@ class AnalysisInterpreter:
             # Compare trajectory curvature
             curvature1 = windup1.get('trajectory_curvature', 0)
             curvature2 = windup2.get('trajectory_curvature', 0)
-            
+            curvature1 = self.safe_float(curvature1)
+            curvature2 = self.safe_float(curvature2)
+
             if abs(curvature1 - curvature2) > 0.001:  # Small threshold for curvature
                 curvature_diff = abs(curvature1 - curvature2)
                 # Determine difference level
@@ -896,7 +908,9 @@ class AnalysisInterpreter:
             # Compare trajectory path length
             path_length1 = windup1.get('trajectory_path_length', 0)
             path_length2 = windup2.get('trajectory_path_length', 0)
-            
+            path_length1 = self.safe_float(path_length1)
+            path_length2 = self.safe_float(path_length2)
+    
             if abs(path_length1 - path_length2) > 0.01:  # Small threshold for path length
                 path_length_diff = abs(path_length1 - path_length2)
                 # Determine difference level
@@ -927,7 +941,9 @@ class AnalysisInterpreter:
             # Compare time to reach max jump height
             max_time1 = jump1.get('max_height_time', 0)
             max_time2 = jump2.get('max_height_time', 0)
-            
+            max_time1 = self.safe_float(max_time1)
+            max_time2 = self.safe_float(max_time2)
+
             if abs(max_time1 - max_time2) > 0.1:
                 max_timing_diff = abs(max_time1 - max_time2)
                 # Determine difference level
@@ -960,6 +976,8 @@ class AnalysisInterpreter:
                 # Compare shoulder-elbow-wrist angle
             sew1 = dip1.get('dip_shoulder_elbow_wrist', 0)
             sew2 = dip2.get('dip_shoulder_elbow_wrist', 0)
+            sew1 = self.safe_float(sew1)
+            sew2 = self.safe_float(sew2)
 
             if abs(sew1 - sew2) > 5:  # 5 degree threshold
                 sew_diff = abs(sew1 - sew2)
@@ -986,7 +1004,9 @@ class AnalysisInterpreter:
             # Compare arm-torso angle
             at1 = dip1.get('dip_arm_torso_angle', 0)
             at2 = dip2.get('dip_arm_torso_angle', 0)
-            
+            at1 = self.safe_float(at1)
+            at2 = self.safe_float(at2)
+
             if abs(at1 - at2) > 5:  # 5 degree threshold
                 at_diff = abs(at1 - at2)
                 # Determine difference level
@@ -1022,7 +1042,9 @@ class AnalysisInterpreter:
                 # Compare shoulder-elbow-wrist angle
                 sew1 = arm_angles1.get('shoulder_elbow_wrist', 0)
                 sew2 = arm_angles2.get('shoulder_elbow_wrist', 0)
-                
+                sew1 = self.safe_float(sew1)
+                sew2 = self.safe_float(sew2)
+
                 if abs(sew1 - sew2) > 5:  # 5 degree threshold
                     sew_diff = abs(sew1 - sew2)
                     # Determine difference level
@@ -1048,7 +1070,9 @@ class AnalysisInterpreter:
                 # Compare arm-torso angle
                 at1 = arm_angles1.get('arm_torso_angle', 0)
                 at2 = arm_angles2.get('arm_torso_angle', 0)
-                
+                at1 = self.safe_float(at1)
+                at2 = self.safe_float(at2)
+
                 if abs(at1 - at2) > 5:  # 5 degree threshold
                     at_diff = abs(at1 - at2)
                     # Determine difference level
@@ -1079,7 +1103,9 @@ class AnalysisInterpreter:
                 # Compare horizontal distance
                 rel_x1 = ball_eye1.get('relative_x', 0)
                 rel_x2 = ball_eye2.get('relative_x', 0)
-                
+                rel_x1 = self.safe_float(rel_x1)
+                rel_x2 = self.safe_float(rel_x2)
+
                 if abs(rel_x1 - rel_x2) > 0.02:  # 2cm threshold
                     rel_x_diff = abs(rel_x1 - rel_x2)
                     # Determine difference level
@@ -1105,7 +1131,9 @@ class AnalysisInterpreter:
                 # Compare vertical distance
                 rel_y1 = ball_eye1.get('relative_y', 0)
                 rel_y2 = ball_eye2.get('relative_y', 0)
-                
+                rel_y1 = self.safe_float(rel_y1)
+                rel_y2 = self.safe_float(rel_y2)
+    
                 if abs(rel_y1 - rel_y2) > 0.02:  # 2cm threshold
                     rel_y_diff = abs(rel_y1 - rel_y2)
                     # Determine difference level
@@ -1148,7 +1176,9 @@ class AnalysisInterpreter:
         if timing1 and timing2:
             relative_timing1 = timing1.get('relative_timing', 0)
             relative_timing2 = timing2.get('relative_timing', 0)
-            
+            relative_timing1 = self.safe_float(relative_timing1)
+            relative_timing2 = self.safe_float(relative_timing2)
+
             if abs(relative_timing1 - relative_timing2) > 0.1:
                 relative_timing_diff = abs(relative_timing1 - relative_timing2)
                 # Determine difference level
@@ -1177,7 +1207,9 @@ class AnalysisInterpreter:
             # Compare body tilt (upper body lean)
             tilt1 = body1.get('body_tilt', {}).get('average', 0)
             tilt2 = body2.get('body_tilt', {}).get('average', 0)
-            
+            tilt1 = self.safe_float(tilt1)
+            tilt2 = self.safe_float(tilt2)
+
             if abs(tilt1 - tilt2) > 10:
                 tilt_diff = abs(tilt1 - tilt2)
                 # Determine difference level
@@ -1208,7 +1240,9 @@ class AnalysisInterpreter:
                 # Compare left thigh angle (hip-knee)
                 left_thigh1 = leg_angles1.get('left_thigh_angle', {}).get('average', 0)
                 left_thigh2 = leg_angles2.get('left_thigh_angle', {}).get('average', 0)
-                
+                left_thigh1 = self.safe_float(left_thigh1)
+                left_thigh2 = self.safe_float(left_thigh2)
+
                 if abs(left_thigh1 - left_thigh2) > 10:
                     thigh_diff = abs(left_thigh1 - left_thigh2)
                     # Determine difference level
@@ -1234,7 +1268,9 @@ class AnalysisInterpreter:
                 # Compare right thigh angle (hip-knee)
                 right_thigh1 = leg_angles1.get('right_thigh_angle', {}).get('average', 0)
                 right_thigh2 = leg_angles2.get('right_thigh_angle', {}).get('average', 0)
-                
+                right_thigh1 = self.safe_float(right_thigh1)
+                right_thigh2 = self.safe_float(right_thigh2)
+
                 if abs(right_thigh1 - right_thigh2) > 10:
                     thigh_diff = abs(right_thigh1 - right_thigh2)
                     # Determine difference level
@@ -1260,7 +1296,9 @@ class AnalysisInterpreter:
                 # Compare left leg angle (hip-knee-ankle)
                 left_leg1 = leg_angles1.get('left_leg_angle', {}).get('average', 0)
                 left_leg2 = leg_angles2.get('left_leg_angle', {}).get('average', 0)
-                
+                left_leg1 = self.safe_float(left_leg1)
+                left_leg2 = self.safe_float(left_leg2)
+
                 if abs(left_leg1 - left_leg2) > 10:
                     leg_diff = abs(left_leg1 - left_leg2)
                     # Determine difference level
@@ -1286,7 +1324,9 @@ class AnalysisInterpreter:
                 # Compare right leg angle (hip-knee-ankle)
                 right_leg1 = leg_angles1.get('right_leg_angle', {}).get('average', 0)
                 right_leg2 = leg_angles2.get('right_leg_angle', {}).get('average', 0)
-                
+                right_leg1 = self.safe_float(right_leg1)
+                right_leg2 = self.safe_float(right_leg2)
+
                 if abs(right_leg1 - right_leg2) > 10:
                     leg_diff = abs(right_leg1 - right_leg2)
                     # Determine difference level
@@ -1317,7 +1357,9 @@ class AnalysisInterpreter:
             # Shoulder-elbow-wrist angle
             shoulder_elbow_wrist1 = body1.get('shoulder_elbow_wrist_angle', {}).get('average', 0)
             shoulder_elbow_wrist2 = body2.get('shoulder_elbow_wrist_angle', {}).get('average', 0)
-            
+            shoulder_elbow_wrist1 = self.safe_float(shoulder_elbow_wrist1)
+            shoulder_elbow_wrist2 = self.safe_float(shoulder_elbow_wrist2)
+
             if abs(shoulder_elbow_wrist1 - shoulder_elbow_wrist2) > 10:
                 angle_diff = abs(shoulder_elbow_wrist1 - shoulder_elbow_wrist2)
                 # Determine difference level
@@ -1343,7 +1385,9 @@ class AnalysisInterpreter:
             # Wrist-shoulder-hip angle
             wrist_shoulder_hip1 = body1.get('wrist_shoulder_hip_angle', {}).get('average', 0)
             wrist_shoulder_hip2 = body2.get('wrist_shoulder_hip_angle', {}).get('average', 0)
-            
+            wrist_shoulder_hip1 = self.safe_float(wrist_shoulder_hip1)
+            wrist_shoulder_hip2 = self.safe_float(wrist_shoulder_hip2)
+
             if abs(wrist_shoulder_hip1 - wrist_shoulder_hip2) > 10:
                 angle_diff = abs(wrist_shoulder_hip1 - wrist_shoulder_hip2)
                 # Determine difference level
@@ -1377,7 +1421,9 @@ class AnalysisInterpreter:
             if right_arm1 and right_arm2:
                 torso_angle1 = right_arm1.get('torso_angle', {}).get('average', 0)
                 torso_angle2 = right_arm2.get('torso_angle', {}).get('average', 0)
-                
+                torso_angle1 = self.safe_float(torso_angle1)
+                torso_angle2 = self.safe_float(torso_angle2)
+
                 if abs(torso_angle1 - torso_angle2) > 5:
                     arm_diff = abs(torso_angle1 - torso_angle2)
                     # Determine difference level
@@ -1409,7 +1455,11 @@ class AnalysisInterpreter:
             rel_x2 = ball_pos2.get('average_relative_x', 0)
             rel_y1 = ball_pos1.get('average_relative_y', 0)
             rel_y2 = ball_pos2.get('average_relative_y', 0)
-            
+            rel_x1 = self.safe_float(rel_x1)
+            rel_x2 = self.safe_float(rel_x2)
+            rel_y1 = self.safe_float(rel_y1)
+            rel_y2 = self.safe_float(rel_y2)
+
             if abs(rel_x1 - rel_x2) > 0.1:
                 ball_x_diff = abs(rel_x1 - rel_x2)
                 # Determine difference level
@@ -1462,7 +1512,9 @@ class AnalysisInterpreter:
             # Compare ball vector magnitude
             magnitude1 = ball_vector1.get('average_magnitude', 0)
             magnitude2 = ball_vector2.get('average_magnitude', 0)
-            
+            magnitude1 = self.safe_float(magnitude1)
+            magnitude2 = self.safe_float(magnitude2)
+
             if abs(magnitude1 - magnitude2) > 0.01:
                 magnitude_diff = abs(magnitude1 - magnitude2)
                 # Determine difference level
@@ -1488,7 +1540,9 @@ class AnalysisInterpreter:
             # Compare ball vector angle
             angle1 = ball_vector1.get('average_angle', 0)
             angle2 = ball_vector2.get('average_angle', 0)
-            
+            angle1 = self.safe_float(angle1)
+            angle2 = self.safe_float(angle2)
+
             if abs(angle1 - angle2) > 5:
                 angle_diff = abs(angle1 - angle2)
                 # Determine difference level
@@ -1794,7 +1848,9 @@ class AnalysisInterpreter:
             # Compare average torso angle at landing
             avg_torso_angle1 = landing_torso1.get('average_torso_angle', 0)
             avg_torso_angle2 = landing_torso2.get('average_torso_angle', 0)
-            
+            avg_torso_angle1 = self.safe_float(avg_torso_angle1)
+            avg_torso_angle2 = self.safe_float(avg_torso_angle2)
+
             if abs(avg_torso_angle1 - avg_torso_angle2) > 5:
                 torso_angle_diff = abs(avg_torso_angle1 - avg_torso_angle2)
                 level = self._get_difference_level(torso_angle_diff, config.LANDING_TORSO_ANGLE_LOW , config.LANDING_TORSO_ANGLE_MEDIUM, config.LANDING_TORSO_ANGLE_HIGH)
